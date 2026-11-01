@@ -1,0 +1,20 @@
+{
+  "ffmpeg": {
+    "revision": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+    "url": "https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+    "sha256": "0aa2b1de2a5698b20a23e93d539a9a8e82ca0117496c5bdf05d198805f42bb3b",
+    "license": "LGPL-2.1-or-later"
+  },
+  "boost": {
+    "version": "1.90.0",
+    "url": "https://archives.boost.io/release/1.90.0/source/boost_1_90_0.tar.bz2",
+    "sha256": "49551aff3b22cbc5c5a9ed3dbc92f0e23ea50a0f7325b0d198b705e8ee3fc305",
+    "license": "BSL-1.0"
+  },
+  "json": {
+    "version": "3.12.0",
+    "url": "https://raw.githubusercontent.com/nlohmann/json/v3.12.0/single_include/nlohmann/json.hpp",
+    "sha256": "aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63",
+    "license": "MIT"
+  }
+}

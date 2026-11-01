@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "listen": {
+    "address": "0.0.0.0",
+    "port": 9078
+  },
+  "sessions": {
+    "maximum": 4,
+    "codec_threads": 1
+  },
+  "limits": {
+    "control_message_bytes": 65536,
+    "packet_payload_bytes": 1048576,
+    "input_window_bytes": 4194304,
+    "output_window_bytes": 4194304,
+    "queued_input_bytes": 8388608,
+    "queued_output_bytes": 8388608,
+    "pcm_fifo_samples": 65536
+  },
+  "timeouts": {
+    "handshake_seconds": 5,
+    "start_seconds": 5,
+    "format_seconds": 10,
+    "ping_seconds": 15,
+    "pong_seconds": 10,
+    "drain_seconds": 10,
+    "close_seconds": 2
+  },
+  "logging": {
+    "debug_enabled": false,
+    "file": "/logs/decoder.log",
+    "maximum_file_bytes": 10485760,
+    "retained_files": 3
+  }
+}

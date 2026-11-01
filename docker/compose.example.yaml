@@ -1,0 +1,19 @@
+services:
+  audio-decoder:
+    image: cinemaseat-audio-decoder:0.1.0
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "9078:9078"
+    volumes:
+      - ./settings.json:/config/settings.json:ro
+      # Only with debug_enabled=true; create directory writable by UID/GID 10001.
+      # - ./logs:/logs
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    pids_limit: 96
+    stop_grace_period: 15s

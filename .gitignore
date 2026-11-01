@@ -1,0 +1,6 @@
+/build/
+/local/
+__pycache__/
+*.pyc
+/docker/settings.json
+/docker/logs/
