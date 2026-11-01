@@ -10,7 +10,7 @@ def build(scratch, test_codecs=False):
     scratch = Path(scratch).resolve()
     scratch.mkdir(parents=True, exist_ok=True)
     prefix = scratch / ('test-deps' if test_codecs else 'deps')
-    stamp = hashlib.sha256((json.dumps(MANIFEST, sort_keys=True) + str(test_codecs) + 'build-v4-strict-xll').encode()).hexdigest()
+    stamp = hashlib.sha256((json.dumps(MANIFEST, sort_keys=True) + str(test_codecs) + 'build-v4-strict-xll' + ('-local-demux-v1' if test_codecs else '')).encode()).hexdigest()
     if (prefix / 'stamp').exists() and (prefix / 'stamp').read_text() == stamp:
         return prefix
     include = prefix / 'include'
@@ -57,12 +57,14 @@ def build(scratch, test_codecs=False):
     directory = scratch / ('test-ffmpeg-build' if test_codecs else 'ffmpeg-build')
     directory.mkdir(exist_ok=True)
     flags = ['--disable-everything', '--disable-autodetect', '--disable-programs', '--disable-doc',
-             '--disable-network', '--disable-avformat', '--disable-avdevice', '--disable-avfilter',
+             '--disable-network', '--enable-avformat' if test_codecs else '--disable-avformat', '--disable-avdevice', '--disable-avfilter',
              '--disable-swscale', '--disable-swresample', '--disable-static', '--enable-shared',
              '--disable-asm', '--disable-x86asm', '--enable-avcodec', '--enable-avutil',
              '--enable-decoder=dca,truehd,mlp' + (',flac' if test_codecs else ''),
              '--enable-encoder=flac' + (',dca,truehd,mlp' if test_codecs else ''),
              '--prefix=' + str(prefix)]
+    if test_codecs:
+        flags += ['--enable-demuxer=matroska,mov,dts,truehd,mlp', '--enable-protocol=file', '--enable-parser=dca,mlp']
     with (directory / 'build.log').open('w') as log:
         subprocess.run([str(sources['ffmpeg'] / 'configure'), *flags], cwd=directory, stdout=log, stderr=subprocess.STDOUT, check=True)
         subprocess.run(['make', '-j' + str(min(8, os.cpu_count() or 2))], cwd=directory, stdout=log, stderr=subprocess.STDOUT, check=True)

@@ -1,3 +1,16 @@
+# 0.1.2 — development candidate, 2026-11-01
+
+- Support explicit native side/back FLAC layouts, including DTS 5.1(side), while
+  preserving channel identity and avoiding downmix or remapping.
+- Add remote codec checks that compare returned FLAC against reference PCM,
+  validate layout/rate/precision/absolute timing and reject bad CRC/data/metadata.
+- Add bounded host-only extraction of selected DTS/TrueHD/MLP packets from an
+  authorized local source, with no media payloads in evidence reports.
+- Add real TrueHD format-change and source-timestamp discrepancy regressions.
+
+No timestamp tolerance is relaxed. No CinemaSeat route or device deployment is
+included. The authorized source still fails the strict source-clock requirement.
+
 # 0.1.1 — development, 2026-11-01
 
 - Added a root Compose file for Dockge with local image builds, read-only settings

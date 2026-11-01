@@ -1,0 +1,2813 @@
+{
+  "date": "2026-11-01",
+  "timezone": "Europe/Amsterdam",
+  "physical_acceptance": false,
+  "candidate_container": {
+    "health": "healthy",
+    "readonly_root": true,
+    "user": "10001:10001",
+    "cap_drop": [
+      "ALL"
+    ],
+    "security_opt": [
+      "no-new-privileges"
+    ],
+    "mounts": 1,
+    "memory_limit_bytes": 536870912,
+    "image_id": "sha256:bd40bf86a8d97910daa8df272e11c6195798cf12599fa93a3478deb1a07adc68",
+    "architecture": "arm64",
+    "registry": [
+      "encoder flac",
+      "decoder dca",
+      "decoder mlp",
+      "decoder truehd"
+    ],
+    "memory_cpu_snapshot": "memory=51.27MiB / 512MiB cpu=0.01% pids=7",
+    "temperature_millidegrees": 30600
+  },
+  "candidate_single": {
+    "criterion_id": "external_audio.remote_codec.v1",
+    "status": "passed",
+    "sessions": 1,
+    "measurements": [
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 567000,
+          "wall_seconds": 0.12436433300172212,
+          "first_output_seconds": 0.021802082999784034,
+          "throughput_realtime": 25.73085001755036
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "SL",
+            "SR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153588,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 208211,
+          "wall_seconds": 0.05357012500462588,
+          "first_output_seconds": 0.01242287500645034,
+          "throughput_realtime": 59.73012009443128
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593593",
+          "first_pts": "1440005",
+          "output_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153588"
+        },
+        "fixture_id": "dts-skip-samples",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 207518,
+          "wall_seconds": 0.053078707998793107,
+          "first_output_seconds": 0.013222916000813711,
+          "throughput_realtime": 60.287827655352146
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 76780,
+          "wall_seconds": 0.02660416599974269,
+          "first_output_seconds": 0.013936124996689614,
+          "throughput_realtime": 9.397024511214445
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "BL",
+            "BR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 24868,
+          "wall_seconds": 0.015516917002969421,
+          "first_output_seconds": 0.010774958005640656,
+          "throughput_realtime": 16.111447908895713
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.015689207997638732,
+          "first_output_seconds": 0.009412999999767635,
+          "throughput_realtime": 15.934520087797017
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-missing-after-anchor",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.01683308299834607,
+          "first_output_seconds": 0.008367000002181157,
+          "throughput_realtime": 14.851706013958564
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "-36000",
+          "first_pts": "-48000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-negative",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.011542083004314918,
+          "first_output_seconds": 0.009206374998029787,
+          "throughput_realtime": 21.659868492241777
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd",
+        "iteration": 0
+      }
+    ],
+    "physical_acceptance": false,
+    "missing": [
+      "60-minute continuous session",
+      "client preheader/fMP4/AVPlayerItem",
+      "physical channel/lip-sync/HDR/DV review",
+      "source seeks and track switches",
+      "server CPU/RSS/temperature unless separately measured"
+    ],
+    "validator_sha256": "3976ce1d87264d385ec6073fe403f44446187b501cca1532a5feea52facae140",
+    "service": {
+      "protocol": 1,
+      "service_version": "0.1.2",
+      "build_id": "1fa9b2358dc7788f45d8f4f6da173cb92e717050fea78bf1dc989210c14ce462",
+      "ffmpeg_revision": "946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+    },
+    "fixture_coverage": [
+      {
+        "fixture_id": "dts-6ch",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "721dc6b0910cbc1b87feca1a12a2674034334091a0c663d4561ec682febd29b4"
+      },
+      {
+        "fixture_id": "dts-skip-samples",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "c748c7ade2f5388d5d9ab2fbc1c2a34ed058cbcf990bdd9ff4cc2efe6b0eb086"
+      },
+      {
+        "fixture_id": "dts",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "baaf363cad6fa3c6a95ed8ec6330b015f7f32f23ce6b87eb48975f6ff7fb5d07"
+      },
+      {
+        "fixture_id": "mlp-6ch",
+        "codec": "mlp",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "aef2e862b778ad7bd6c7c7f7b564d0003c7e1551898062afe73a5d6d7a02eaf5"
+      },
+      {
+        "fixture_id": "mlp",
+        "codec": "mlp",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "2d1f7487e0596b554655289ce0e6c5402593866d7540003a13f74f3ebb5443f7"
+      },
+      {
+        "fixture_id": "truehd-missing-after-anchor",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "40e1651cbe2b547cc8862aa6c7f8703e2914507727b55383916afd308f394b47"
+      },
+      {
+        "fixture_id": "truehd-negative",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "85fa5fe88b008898989e7b95b0fd22643e56438ed00492cee5de240f5ede349f"
+      },
+      {
+        "fixture_id": "truehd",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "d234b9c24fe09fd341ce2239d796dab5b2ded7545c4fc3e21767fdc1ae1cd9fe"
+      }
+    ],
+    "available_sessions_restored": true
+  },
+  "candidate_two": {
+    "criterion_id": "external_audio.remote_codec.v1",
+    "status": "passed",
+    "sessions": 2,
+    "measurements": [
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 567000,
+          "wall_seconds": 0.13516399999934947,
+          "first_output_seconds": 0.03200016600021627,
+          "throughput_realtime": 23.674943032282275
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "SL",
+            "SR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 567000,
+          "wall_seconds": 0.14781629200297175,
+          "first_output_seconds": 0.033736334000423085,
+          "throughput_realtime": 21.648493252257108
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "SL",
+            "SR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153588,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 208211,
+          "wall_seconds": 0.09448337500361959,
+          "first_output_seconds": 0.026874959003180265,
+          "throughput_realtime": 33.865746221252365
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593593",
+          "first_pts": "1440005",
+          "output_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153588"
+        },
+        "fixture_id": "dts-skip-samples",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153588,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 208211,
+          "wall_seconds": 0.08941733300162014,
+          "first_output_seconds": 0.02686025000002701,
+          "throughput_realtime": 35.78444908373664
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593593",
+          "first_pts": "1440005",
+          "output_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153588"
+        },
+        "fixture_id": "dts-skip-samples",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 207518,
+          "wall_seconds": 0.07148883300396847,
+          "first_output_seconds": 0.020219750003889203,
+          "throughput_realtime": 44.76223580013347
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 207518,
+          "wall_seconds": 0.06825383300019894,
+          "first_output_seconds": 0.023657750003621913,
+          "throughput_realtime": 46.8838138363698
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 76780,
+          "wall_seconds": 0.04041558300377801,
+          "first_output_seconds": 0.01970558299944969,
+          "throughput_realtime": 6.18573286389634
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "BL",
+            "BR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 76780,
+          "wall_seconds": 0.06124366700532846,
+          "first_output_seconds": 0.01942550000239862,
+          "throughput_realtime": 4.082054720502757
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "BL",
+            "BR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 24868,
+          "wall_seconds": 0.03742208399489755,
+          "first_output_seconds": 0.012331624995567836,
+          "throughput_realtime": 6.680547241411974
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 24868,
+          "wall_seconds": 0.029432790994178504,
+          "first_output_seconds": 0.012139415994170122,
+          "throughput_realtime": 8.493927743700805
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.028399582995916717,
+          "first_output_seconds": 0.014032207996933721,
+          "throughput_realtime": 8.80294615720044
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-missing-after-anchor",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.02595212499727495,
+          "first_output_seconds": 0.0136308330038446,
+          "throughput_realtime": 9.633122529513507
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-missing-after-anchor",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.02426004199514864,
+          "first_output_seconds": 0.014480917001492344,
+          "throughput_realtime": 10.305011015644297
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "-36000",
+          "first_pts": "-48000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-negative",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.02570712500164518,
+          "first_output_seconds": 0.01436404099513311,
+          "throughput_realtime": 9.724930344564035
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "-36000",
+          "first_pts": "-48000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-negative",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.024163124995538965,
+          "first_output_seconds": 0.01633712500188267,
+          "throughput_realtime": 10.34634386264837
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.02158483400125988,
+          "first_output_seconds": 0.019423291996645276,
+          "throughput_realtime": 11.582206283606713
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd",
+        "iteration": 0
+      }
+    ],
+    "physical_acceptance": false,
+    "missing": [
+      "60-minute continuous session",
+      "client preheader/fMP4/AVPlayerItem",
+      "physical channel/lip-sync/HDR/DV review",
+      "source seeks and track switches",
+      "server CPU/RSS/temperature unless separately measured"
+    ],
+    "validator_sha256": "3976ce1d87264d385ec6073fe403f44446187b501cca1532a5feea52facae140",
+    "service": {
+      "protocol": 1,
+      "service_version": "0.1.2",
+      "build_id": "1fa9b2358dc7788f45d8f4f6da173cb92e717050fea78bf1dc989210c14ce462",
+      "ffmpeg_revision": "946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+    },
+    "fixture_coverage": [
+      {
+        "fixture_id": "dts-6ch",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "721dc6b0910cbc1b87feca1a12a2674034334091a0c663d4561ec682febd29b4"
+      },
+      {
+        "fixture_id": "dts-skip-samples",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "c748c7ade2f5388d5d9ab2fbc1c2a34ed058cbcf990bdd9ff4cc2efe6b0eb086"
+      },
+      {
+        "fixture_id": "dts",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "baaf363cad6fa3c6a95ed8ec6330b015f7f32f23ce6b87eb48975f6ff7fb5d07"
+      },
+      {
+        "fixture_id": "mlp-6ch",
+        "codec": "mlp",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "aef2e862b778ad7bd6c7c7f7b564d0003c7e1551898062afe73a5d6d7a02eaf5"
+      },
+      {
+        "fixture_id": "mlp",
+        "codec": "mlp",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "2d1f7487e0596b554655289ce0e6c5402593866d7540003a13f74f3ebb5443f7"
+      },
+      {
+        "fixture_id": "truehd-missing-after-anchor",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "40e1651cbe2b547cc8862aa6c7f8703e2914507727b55383916afd308f394b47"
+      },
+      {
+        "fixture_id": "truehd-negative",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "85fa5fe88b008898989e7b95b0fd22643e56438ed00492cee5de240f5ede349f"
+      },
+      {
+        "fixture_id": "truehd",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "d234b9c24fe09fd341ce2239d796dab5b2ded7545c4fc3e21767fdc1ae1cd9fe"
+      }
+    ],
+    "available_sessions_restored": true
+  },
+  "candidate_four": {
+    "criterion_id": "external_audio.remote_codec.v1",
+    "status": "passed",
+    "sessions": 4,
+    "measurements": [
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 567000,
+          "wall_seconds": 0.1860058329984895,
+          "first_output_seconds": 0.034786625001288485,
+          "throughput_realtime": 17.20376156174622
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "SL",
+            "SR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 567000,
+          "wall_seconds": 0.16374366599484347,
+          "first_output_seconds": 0.023263124996447004,
+          "throughput_realtime": 19.542740664550486
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "SL",
+            "SR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 567000,
+          "wall_seconds": 0.16984533300274052,
+          "first_output_seconds": 0.02791537500161212,
+          "throughput_realtime": 18.840670764550044
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "SL",
+            "SR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 567000,
+          "wall_seconds": 0.17245333399478113,
+          "first_output_seconds": 0.03910745900066104,
+          "throughput_realtime": 18.555744478079156
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "SL",
+            "SR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "310208fc323259b972e61630b6a5266dd351d477237ae158cc3a6b3a49663a29",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153588,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 208211,
+          "wall_seconds": 0.15383337499952177,
+          "first_output_seconds": 0.07011258300190093,
+          "throughput_realtime": 20.80010270859589
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593593",
+          "first_pts": "1440005",
+          "output_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153588"
+        },
+        "fixture_id": "dts-skip-samples",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153588,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 208211,
+          "wall_seconds": 0.14227625000057742,
+          "first_output_seconds": 0.0172080830016057,
+          "throughput_realtime": 22.48969873740005
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593593",
+          "first_pts": "1440005",
+          "output_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153588"
+        },
+        "fixture_id": "dts-skip-samples",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153588,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 208211,
+          "wall_seconds": 0.1505569170039962,
+          "first_output_seconds": 0.06785720799962291,
+          "throughput_realtime": 21.25275984440535
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593593",
+          "first_pts": "1440005",
+          "output_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153588"
+        },
+        "fixture_id": "dts-skip-samples",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153588,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 208211,
+          "wall_seconds": 0.1421725000036531,
+          "first_output_seconds": 0.04876916699868161,
+          "throughput_realtime": 22.506110534159436
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593593",
+          "first_pts": "1440005",
+          "output_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "a6e592a435b564bface07088bb6bb7dc8c8ec3b2b5ad35fa4352da51e9111da3",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153588"
+        },
+        "fixture_id": "dts-skip-samples",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 207518,
+          "wall_seconds": 0.15930349999689497,
+          "first_output_seconds": 0.04124145899550058,
+          "throughput_realtime": 20.087443151358084
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 207518,
+          "wall_seconds": 0.15440058300009696,
+          "first_output_seconds": 0.035837124996760394,
+          "throughput_realtime": 20.725310344184326
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 207518,
+          "wall_seconds": 0.15032654200331308,
+          "first_output_seconds": 0.03570166700228583,
+          "throughput_realtime": 21.286992685093992
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 153600,
+          "sample_rate": 48000,
+          "output_packets": 38,
+          "output_bytes": 207518,
+          "wall_seconds": 0.1439527080001426,
+          "first_output_seconds": 0.02432566700008465,
+          "throughput_realtime": 22.229522767969257
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "dts",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1593600",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "db5c9b4ec6b4c001c3c2b4378d20cd5b93787f9d2f6f8095330a0e090db0269b",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "153600"
+        },
+        "fixture_id": "dts",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 76780,
+          "wall_seconds": 0.09386779200576711,
+          "first_output_seconds": 0.03643854200345231,
+          "throughput_realtime": 2.663320342984528
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "BL",
+            "BR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 76780,
+          "wall_seconds": 0.09055266699579079,
+          "first_output_seconds": 0.03228191699599847,
+          "throughput_realtime": 2.7608242616600225
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "BL",
+            "BR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 76780,
+          "wall_seconds": 0.09719225000299048,
+          "first_output_seconds": 0.033769207999284845,
+          "throughput_realtime": 2.5722215505074515
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "BL",
+            "BR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 76780,
+          "wall_seconds": 0.08746108299965272,
+          "first_output_seconds": 0.023720666002191138,
+          "throughput_realtime": 2.8584141817794855
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR",
+            "FC",
+            "LFE",
+            "BL",
+            "BR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "9388590fac0a308cf7d7e0b7f09cb437148e1b4bcd97a863130108a82ae6ef6f",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp-6ch",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 24868,
+          "wall_seconds": 0.07588099999702536,
+          "first_output_seconds": 0.02302724999753991,
+          "throughput_realtime": 3.2946323850476453
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 24868,
+          "wall_seconds": 0.07145837500138441,
+          "first_output_seconds": 0.0213619580026716,
+          "throughput_realtime": 3.4985402340195475
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 24868,
+          "wall_seconds": 0.06557387500652112,
+          "first_output_seconds": 0.01943529100390151,
+          "throughput_realtime": 3.812493923458668
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 24000,
+          "sample_rate": 96000,
+          "output_packets": 6,
+          "output_bytes": 24868,
+          "wall_seconds": 0.07373679100419395,
+          "first_output_seconds": 0.022101875001681037,
+          "throughput_realtime": 3.3904377529228347
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "mlp",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "2904000",
+          "first_pts": "2880000",
+          "output_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "6c1073785511f8a605a35efb2347679385400a0a125001cdfa8e6fab46029047",
+          "sample_rate": 96000,
+          "status": "passed",
+          "valid_samples": "24000"
+        },
+        "fixture_id": "mlp",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.06485995799448574,
+          "first_output_seconds": 0.019800499998382293,
+          "throughput_realtime": 3.8544582471245894
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-missing-after-anchor",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.06289012499473756,
+          "first_output_seconds": 0.029979290993651375,
+          "throughput_realtime": 3.9751868838059896
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-missing-after-anchor",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.06656170900532743,
+          "first_output_seconds": 0.04034525000315625,
+          "throughput_realtime": 3.755913177950263
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-missing-after-anchor",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.06056783399981214,
+          "first_output_seconds": 0.022507624998979736,
+          "throughput_realtime": 4.1276034404792386
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-missing-after-anchor",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.05850708299840335,
+          "first_output_seconds": 0.03486216699820943,
+          "throughput_realtime": 4.272986913513061
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "-36000",
+          "first_pts": "-48000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-negative",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.05076004099828424,
+          "first_output_seconds": 0.03542120799829718,
+          "throughput_realtime": 4.925133925885725
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "-36000",
+          "first_pts": "-48000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-negative",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.061086166999302804,
+          "first_output_seconds": 0.03580179199343547,
+          "throughput_realtime": 4.092579585208765
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "-36000",
+          "first_pts": "-48000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-negative",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.05363499999657506,
+          "first_output_seconds": 0.0341199999966193,
+          "throughput_realtime": 4.6611354528938955
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "-36000",
+          "first_pts": "-48000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd-negative",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.06211249999614665,
+          "first_output_seconds": 0.02717895799287362,
+          "throughput_realtime": 4.024954719509109
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.05317704200570006,
+          "first_output_seconds": 0.022227125002245884,
+          "throughput_realtime": 4.701276915199654
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.0666327920043841,
+          "first_output_seconds": 0.03185441700043157,
+          "throughput_realtime": 3.751906418442608
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd",
+        "iteration": 0
+      },
+      {
+        "metrics": {
+          "valid_samples": 12000,
+          "sample_rate": 48000,
+          "output_packets": 3,
+          "output_bytes": 12644,
+          "wall_seconds": 0.06446066700300435,
+          "first_output_seconds": 0.03159445899655111,
+          "throughput_realtime": 3.878334054290008
+        },
+        "pcm_equivalence": {
+          "bits_per_sample": 24,
+          "channel_order": [
+            "FL",
+            "FR"
+          ],
+          "codec": "truehd",
+          "criterion_id": "external_audio.host_pcm_equivalence.v1",
+          "end_pts_exclusive": "1452000",
+          "first_pts": "1440000",
+          "output_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "physical_acceptance": false,
+          "reference_pcm_sha256": "e0ff798108c5b335910556030b70643340c39509bf5173fd55b35f18dbb62dff",
+          "sample_rate": 48000,
+          "status": "passed",
+          "valid_samples": "12000"
+        },
+        "fixture_id": "truehd",
+        "iteration": 0
+      }
+    ],
+    "physical_acceptance": false,
+    "missing": [
+      "60-minute continuous session",
+      "client preheader/fMP4/AVPlayerItem",
+      "physical channel/lip-sync/HDR/DV review",
+      "source seeks and track switches",
+      "server CPU/RSS/temperature unless separately measured"
+    ],
+    "validator_sha256": "3976ce1d87264d385ec6073fe403f44446187b501cca1532a5feea52facae140",
+    "service": {
+      "protocol": 1,
+      "service_version": "0.1.2",
+      "build_id": "1fa9b2358dc7788f45d8f4f6da173cb92e717050fea78bf1dc989210c14ce462",
+      "ffmpeg_revision": "946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+    },
+    "fixture_coverage": [
+      {
+        "fixture_id": "dts-6ch",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "721dc6b0910cbc1b87feca1a12a2674034334091a0c663d4561ec682febd29b4"
+      },
+      {
+        "fixture_id": "dts-skip-samples",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "c748c7ade2f5388d5d9ab2fbc1c2a34ed058cbcf990bdd9ff4cc2efe6b0eb086"
+      },
+      {
+        "fixture_id": "dts",
+        "codec": "dts",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "baaf363cad6fa3c6a95ed8ec6330b015f7f32f23ce6b87eb48975f6ff7fb5d07"
+      },
+      {
+        "fixture_id": "mlp-6ch",
+        "codec": "mlp",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "aef2e862b778ad7bd6c7c7f7b564d0003c7e1551898062afe73a5d6d7a02eaf5"
+      },
+      {
+        "fixture_id": "mlp",
+        "codec": "mlp",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "2d1f7487e0596b554655289ce0e6c5402593866d7540003a13f74f3ebb5443f7"
+      },
+      {
+        "fixture_id": "truehd-missing-after-anchor",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "40e1651cbe2b547cc8862aa6c7f8703e2914507727b55383916afd308f394b47"
+      },
+      {
+        "fixture_id": "truehd-negative",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "85fa5fe88b008898989e7b95b0fd22643e56438ed00492cee5de240f5ede349f"
+      },
+      {
+        "fixture_id": "truehd",
+        "codec": "truehd",
+        "packet_count": 300,
+        "sample_rate_hint": null,
+        "bits_per_sample_hint": null,
+        "channel_order_hint": null,
+        "expected_source_profile": null,
+        "fixture_sha256": "d234b9c24fe09fd341ce2239d796dab5b2ded7545c4fc3e21767fdc1ae1cd9fe"
+      }
+    ],
+    "available_sessions_restored": true
+  },
+  "credit_pause": {
+    "criterion_id": "external_audio.credit_pause_cancel.v1",
+    "status": "passed",
+    "pause_seconds": 35,
+    "ping_count": 2,
+    "output_credit_granted": "0",
+    "received_audio_bytes": "1042528",
+    "sent_audio_bytes": "9625536",
+    "producer_credit_wait_observed": true,
+    "cancel_latency_seconds": 0.007437207998009399,
+    "physical_acceptance": false
+  },
+  "authorized_source": {
+    "criterion_id": "external_audio.remote_codec.v1",
+    "status": "failed",
+    "sessions": 1,
+    "measurements": [],
+    "physical_acceptance": false,
+    "missing": [
+      "60-minute continuous session",
+      "client preheader/fMP4/AVPlayerItem",
+      "physical channel/lip-sync/HDR/DV review",
+      "source seeks and track switches",
+      "server CPU/RSS/temperature unless separately measured"
+    ],
+    "validator_sha256": "3976ce1d87264d385ec6073fe403f44446187b501cca1532a5feea52facae140",
+    "service": {
+      "protocol": 1,
+      "service_version": "0.1.2",
+      "build_id": "1fa9b2358dc7788f45d8f4f6da173cb92e717050fea78bf1dc989210c14ce462",
+      "ffmpeg_revision": "946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+    },
+    "source_inspection": {
+      "canonical_pcm_sha256": "f1beb7d0cb9f25257561199db2494427acb6562877c9c6ce806b5494e587b3a6",
+      "criterion_id": "external_audio.host_source_timeline.v1",
+      "demux_groups_truncated": false,
+      "demux_position_groups": [
+        {
+          "first_pts": "0",
+          "first_sequence": "0",
+          "input_packets": 8,
+          "last_pts": "74",
+          "position_bytes": "7685"
+        },
+        {
+          "first_pts": "85",
+          "first_sequence": "8",
+          "input_packets": 8,
+          "last_pts": "159",
+          "position_bytes": "28626"
+        },
+        {
+          "first_pts": "171",
+          "first_sequence": "16",
+          "input_packets": 8,
+          "last_pts": "245",
+          "position_bytes": "51101"
+        },
+        {
+          "first_pts": "256",
+          "first_sequence": "24",
+          "input_packets": 8,
+          "last_pts": "330",
+          "position_bytes": "73500"
+        },
+        {
+          "first_pts": "341",
+          "first_sequence": "32",
+          "input_packets": 8,
+          "last_pts": "415",
+          "position_bytes": "95903"
+        },
+        {
+          "first_pts": "427",
+          "first_sequence": "40",
+          "input_packets": 8,
+          "last_pts": "501",
+          "position_bytes": "118298"
+        },
+        {
+          "first_pts": "512",
+          "first_sequence": "48",
+          "input_packets": 8,
+          "last_pts": "586",
+          "position_bytes": "140713"
+        },
+        {
+          "first_pts": "597",
+          "first_sequence": "56",
+          "input_packets": 8,
+          "last_pts": "671",
+          "position_bytes": "163048"
+        },
+        {
+          "first_pts": "683",
+          "first_sequence": "64",
+          "input_packets": 8,
+          "last_pts": "757",
+          "position_bytes": "185423"
+        },
+        {
+          "first_pts": "768",
+          "first_sequence": "72",
+          "input_packets": 7,
+          "last_pts": "831",
+          "position_bytes": "207810"
+        },
+        {
+          "first_pts": "843",
+          "first_sequence": "79",
+          "input_packets": 8,
+          "last_pts": "917",
+          "position_bytes": "228146"
+        },
+        {
+          "first_pts": "928",
+          "first_sequence": "87",
+          "input_packets": 8,
+          "last_pts": "1002",
+          "position_bytes": "250503"
+        },
+        {
+          "first_pts": "1013",
+          "first_sequence": "95",
+          "input_packets": 8,
+          "last_pts": "1087",
+          "position_bytes": "272872"
+        },
+        {
+          "first_pts": "1099",
+          "first_sequence": "103",
+          "input_packets": 8,
+          "last_pts": "1173",
+          "position_bytes": "295261"
+        },
+        {
+          "first_pts": "1184",
+          "first_sequence": "111",
+          "input_packets": 8,
+          "last_pts": "1258",
+          "position_bytes": "317598"
+        },
+        {
+          "first_pts": "1269",
+          "first_sequence": "119",
+          "input_packets": 8,
+          "last_pts": "1343",
+          "position_bytes": "339967"
+        },
+        {
+          "first_pts": "1355",
+          "first_sequence": "127",
+          "input_packets": 8,
+          "last_pts": "1429",
+          "position_bytes": "362424"
+        },
+        {
+          "first_pts": "1440",
+          "first_sequence": "135",
+          "input_packets": 8,
+          "last_pts": "1514",
+          "position_bytes": "384765"
+        },
+        {
+          "first_pts": "1525",
+          "first_sequence": "143",
+          "input_packets": 8,
+          "last_pts": "1599",
+          "position_bytes": "407134"
+        },
+        {
+          "first_pts": "1611",
+          "first_sequence": "151",
+          "input_packets": 6,
+          "last_pts": "1663",
+          "position_bytes": "429555"
+        },
+        {
+          "first_pts": "1675",
+          "first_sequence": "157",
+          "input_packets": 8,
+          "last_pts": "1749",
+          "position_bytes": "447119"
+        },
+        {
+          "first_pts": "1760",
+          "first_sequence": "165",
+          "input_packets": 8,
+          "last_pts": "1834",
+          "position_bytes": "469560"
+        },
+        {
+          "first_pts": "1845",
+          "first_sequence": "173",
+          "input_packets": 8,
+          "last_pts": "1919",
+          "position_bytes": "491869"
+        },
+        {
+          "first_pts": "1931",
+          "first_sequence": "181",
+          "input_packets": 8,
+          "last_pts": "2005",
+          "position_bytes": "514210"
+        },
+        {
+          "first_pts": "2016",
+          "first_sequence": "189",
+          "input_packets": 8,
+          "last_pts": "2090",
+          "position_bytes": "536532"
+        },
+        {
+          "first_pts": "2101",
+          "first_sequence": "197",
+          "input_packets": 8,
+          "last_pts": "2175",
+          "position_bytes": "558913"
+        },
+        {
+          "first_pts": "2187",
+          "first_sequence": "205",
+          "input_packets": 8,
+          "last_pts": "2261",
+          "position_bytes": "581322"
+        },
+        {
+          "first_pts": "2272",
+          "first_sequence": "213",
+          "input_packets": 8,
+          "last_pts": "2346",
+          "position_bytes": "603695"
+        },
+        {
+          "first_pts": "2357",
+          "first_sequence": "221",
+          "input_packets": 8,
+          "last_pts": "2431",
+          "position_bytes": "626068"
+        },
+        {
+          "first_pts": "2443",
+          "first_sequence": "229",
+          "input_packets": 6,
+          "last_pts": "2495",
+          "position_bytes": "648425"
+        },
+        {
+          "first_pts": "2507",
+          "first_sequence": "235",
+          "input_packets": 8,
+          "last_pts": "2581",
+          "position_bytes": "666029"
+        },
+        {
+          "first_pts": "2592",
+          "first_sequence": "243",
+          "input_packets": 8,
+          "last_pts": "2666",
+          "position_bytes": "688502"
+        },
+        {
+          "first_pts": "2677",
+          "first_sequence": "251",
+          "input_packets": 8,
+          "last_pts": "2751",
+          "position_bytes": "710819"
+        },
+        {
+          "first_pts": "2763",
+          "first_sequence": "259",
+          "input_packets": 8,
+          "last_pts": "2837",
+          "position_bytes": "733188"
+        },
+        {
+          "first_pts": "2848",
+          "first_sequence": "267",
+          "input_packets": 8,
+          "last_pts": "2922",
+          "position_bytes": "755537"
+        },
+        {
+          "first_pts": "2933",
+          "first_sequence": "275",
+          "input_packets": 8,
+          "last_pts": "3007",
+          "position_bytes": "777906"
+        },
+        {
+          "first_pts": "3019",
+          "first_sequence": "283",
+          "input_packets": 8,
+          "last_pts": "3093",
+          "position_bytes": "800287"
+        },
+        {
+          "first_pts": "3104",
+          "first_sequence": "291",
+          "input_packets": 8,
+          "last_pts": "3178",
+          "position_bytes": "864369"
+        },
+        {
+          "first_pts": "3189",
+          "first_sequence": "299",
+          "input_packets": 3,
+          "last_pts": "3209",
+          "position_bytes": "955425"
+        },
+        {
+          "first_pts": "3221",
+          "first_sequence": "302",
+          "input_packets": 8,
+          "last_pts": "3295",
+          "position_bytes": "1005573"
+        },
+        {
+          "first_pts": "3307",
+          "first_sequence": "310",
+          "input_packets": 8,
+          "last_pts": "3381",
+          "position_bytes": "1108273"
+        },
+        {
+          "first_pts": "3392",
+          "first_sequence": "318",
+          "input_packets": 8,
+          "last_pts": "3466",
+          "position_bytes": "1218630"
+        },
+        {
+          "first_pts": "3477",
+          "first_sequence": "326",
+          "input_packets": 8,
+          "last_pts": "3551",
+          "position_bytes": "1326283"
+        },
+        {
+          "first_pts": "3563",
+          "first_sequence": "334",
+          "input_packets": 8,
+          "last_pts": "3637",
+          "position_bytes": "1434561"
+        },
+        {
+          "first_pts": "3648",
+          "first_sequence": "342",
+          "input_packets": 8,
+          "last_pts": "3722",
+          "position_bytes": "1549589"
+        },
+        {
+          "first_pts": "3733",
+          "first_sequence": "350",
+          "input_packets": 8,
+          "last_pts": "3807",
+          "position_bytes": "1656674"
+        },
+        {
+          "first_pts": "3819",
+          "first_sequence": "358",
+          "input_packets": 8,
+          "last_pts": "3893",
+          "position_bytes": "1753140"
+        },
+        {
+          "first_pts": "3904",
+          "first_sequence": "366",
+          "input_packets": 8,
+          "last_pts": "3978",
+          "position_bytes": "1867058"
+        },
+        {
+          "first_pts": "3989",
+          "first_sequence": "374",
+          "input_packets": 6,
+          "last_pts": "4041",
+          "position_bytes": "1977495"
+        },
+        {
+          "first_pts": "4053",
+          "first_sequence": "380",
+          "input_packets": 8,
+          "last_pts": "4127",
+          "position_bytes": "2097763"
+        },
+        {
+          "first_pts": "4139",
+          "first_sequence": "388",
+          "input_packets": 8,
+          "last_pts": "4213",
+          "position_bytes": "2208078"
+        },
+        {
+          "first_pts": "4224",
+          "first_sequence": "396",
+          "input_packets": 8,
+          "last_pts": "4298",
+          "position_bytes": "2318622"
+        },
+        {
+          "first_pts": "4309",
+          "first_sequence": "404",
+          "input_packets": 8,
+          "last_pts": "4383",
+          "position_bytes": "2428333"
+        },
+        {
+          "first_pts": "4395",
+          "first_sequence": "412",
+          "input_packets": 8,
+          "last_pts": "4469",
+          "position_bytes": "2538441"
+        },
+        {
+          "first_pts": "4480",
+          "first_sequence": "420",
+          "input_packets": 8,
+          "last_pts": "4554",
+          "position_bytes": "2647557"
+        },
+        {
+          "first_pts": "4565",
+          "first_sequence": "428",
+          "input_packets": 8,
+          "last_pts": "4639",
+          "position_bytes": "2755584"
+        },
+        {
+          "first_pts": "4651",
+          "first_sequence": "436",
+          "input_packets": 8,
+          "last_pts": "4725",
+          "position_bytes": "2865632"
+        },
+        {
+          "first_pts": "4736",
+          "first_sequence": "444",
+          "input_packets": 8,
+          "last_pts": "4810",
+          "position_bytes": "2975485"
+        },
+        {
+          "first_pts": "4821",
+          "first_sequence": "452",
+          "input_packets": 6,
+          "last_pts": "4873",
+          "position_bytes": "3085522"
+        },
+        {
+          "first_pts": "4885",
+          "first_sequence": "458",
+          "input_packets": 8,
+          "last_pts": "4959",
+          "position_bytes": "3209225"
+        },
+        {
+          "first_pts": "4971",
+          "first_sequence": "466",
+          "input_packets": 4,
+          "last_pts": "5002",
+          "position_bytes": "3315969"
+        }
+      ],
+      "format": {
+        "bits_per_sample": 16,
+        "channel_order": [
+          "FL",
+          "FR",
+          "FC",
+          "LFE",
+          "SL",
+          "SR"
+        ],
+        "decoded_frames": 470,
+        "first_discontinuous_frame": 11,
+        "first_pts": "0",
+        "max_abs_delta_samples": "80",
+        "sample_rate": 48000,
+        "source_profile": "dts-hd-ma",
+        "tolerance_samples": "48"
+      },
+      "source_timeline_accepted": false,
+      "status": "passed",
+      "time_base": {
+        "den": 1000,
+        "num": 1
+      },
+      "trace": [
+        {
+          "pts": "0",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "0"
+        },
+        {
+          "pts": "10",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "512"
+        },
+        {
+          "pts": "21",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "1024"
+        },
+        {
+          "pts": "31",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "1536"
+        },
+        {
+          "pts": "42",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "2048"
+        },
+        {
+          "pts": "53",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "2560"
+        },
+        {
+          "pts": "63",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "3072"
+        },
+        {
+          "pts": "74",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "3584"
+        },
+        {
+          "pts": "85",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "4096"
+        },
+        {
+          "pts": "95",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "4608"
+        },
+        {
+          "pts": "106",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "5120"
+        },
+        {
+          "pts": "116",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "5632"
+        },
+        {
+          "pts": "127",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "6144"
+        },
+        {
+          "pts": "138",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "6656"
+        },
+        {
+          "pts": "148",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "7168"
+        },
+        {
+          "pts": "159",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "7680"
+        },
+        {
+          "pts": "171",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "8192"
+        },
+        {
+          "pts": "181",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "8704"
+        },
+        {
+          "pts": "192",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "9216"
+        },
+        {
+          "pts": "202",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "9728"
+        },
+        {
+          "pts": "213",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "10240"
+        },
+        {
+          "pts": "224",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "10752"
+        },
+        {
+          "pts": "234",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "11264"
+        },
+        {
+          "pts": "245",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "11776"
+        },
+        {
+          "pts": "256",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "12288"
+        },
+        {
+          "pts": "266",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "12800"
+        },
+        {
+          "pts": "277",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "13312"
+        },
+        {
+          "pts": "287",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "13824"
+        },
+        {
+          "pts": "298",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "14336"
+        },
+        {
+          "pts": "309",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "14848"
+        },
+        {
+          "pts": "319",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "15360"
+        },
+        {
+          "pts": "330",
+          "rate": 48000,
+          "samples": 512,
+          "samples_before": "15872"
+        }
+      ],
+      "trace_truncated": true,
+      "valid_samples": "240640"
+    },
+    "fixture_coverage": [
+      {
+        "fixture_id": "authorized-source",
+        "codec": "dts",
+        "packet_count": 470,
+        "sample_rate_hint": 48000,
+        "bits_per_sample_hint": 16,
+        "channel_order_hint": [
+          "FL",
+          "FR",
+          "FC",
+          "LFE",
+          "SL",
+          "SR"
+        ],
+        "expected_source_profile": "dts-hd-ma",
+        "fixture_sha256": "bdd124bb5aacaf4dc0cae0646bd447549c73b672e8742105a12788e90a3bcba9"
+      }
+    ],
+    "partial_output": {
+      "received_packets": 1,
+      "received_bytes": "6442",
+      "observed_valid_samples": "4096",
+      "output_format": {
+        "codec": "flac",
+        "sample_rate": 48000,
+        "bits_per_sample": 16,
+        "channel_order": [
+          "FL",
+          "FR",
+          "FC",
+          "LFE",
+          "SL",
+          "SR"
+        ],
+        "time_base": {
+          "den": 48000,
+          "num": 1
+        },
+        "source_profile": "dts-hd-ma"
+      },
+      "end_output_seen": false,
+      "coverage": "incomplete",
+      "physical_acceptance": false
+    },
+    "error_kind": "AssertionError",
+    "error_code": "timeline_discontinuity"
+  }
+}

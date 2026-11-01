@@ -1,6 +1,6 @@
 services:
   audio-decoder:
-    image: cinemaseat-audio-decoder:0.1.1
+    image: cinemaseat-audio-decoder:0.1.2
     build:
       context: ..
       dockerfile: docker/Dockerfile

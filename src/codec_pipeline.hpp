@@ -23,7 +23,7 @@ class CodecPipeline {
     uint64_t generation, input_count = 0, output_count = 0, samples = 0, emitted_samples = 0;
     int64_t first_pts = 0, next_pts = 0, encoded_pts = 0;
     std::optional<int64_t> priming_pts;
-    int input_format = -1, fifo_cap;
+    int input_format = -1, input_precision = 0, fifo_cap;
     bool anchored = false, finished = false;
     std::function<void(const Json&)> on_format;
     std::function<void(Packet)> on_packet;

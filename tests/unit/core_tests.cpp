@@ -13,6 +13,7 @@
 extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/intreadwrite.h>
+#include <libavutil/sha.h>
 }
 using namespace csad;
 static void test(bool b, std::source_location at = std::source_location::current()) { if (!b) throw std::runtime_error("test assertion failed at line " + std::to_string(at.line())); }
@@ -73,6 +74,7 @@ static std::vector<Packet> generate(AVCodecID id, int channels, int rate) {
     enc->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
     enc->sample_fmt = id == AV_CODEC_ID_DTS ? AV_SAMPLE_FMT_S32 : AV_SAMPLE_FMT_S32P;
     av_channel_layout_default(&enc->ch_layout, channels);
+    if (id == AV_CODEC_ID_DTS && channels == 6) { av_channel_layout_uninit(&enc->ch_layout); av_channel_layout_from_mask(&enc->ch_layout, AV_CH_LAYOUT_5POINT1); }
     if (id == AV_CODEC_ID_MLP && channels == 6) { av_channel_layout_uninit(&enc->ch_layout); av_channel_layout_from_mask(&enc->ch_layout, AV_CH_LAYOUT_5POINT1_BACK); }
     test(avcodec_open2(enc.get(), codec, nullptr) >= 0);
     std::vector<Packet> packets;
@@ -102,10 +104,23 @@ static std::vector<Packet> generate(AVCodecID id, int channels, int rate) {
     }
     test(avcodec_send_frame(enc.get(), nullptr) >= 0); receive(); test(!packets.empty()); return packets;
 }
-static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& packets, const Json& format = {}) {
+static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& packets, const Json& format = {}, Json* measured = nullptr, AVRational source_tb = {0, 1}, Json* trace = nullptr) {
     CodecPtr dec(avcodec_alloc_context3(avcodec_find_decoder(id))); test(bool(dec));
-    dec->flags |= AV_CODEC_FLAG_BITEXACT; dec->err_recognition = AV_EF_EXPLODE;
+    dec->flags |= AV_CODEC_FLAG_BITEXACT; dec->err_recognition = AV_EF_CRCCHECK | AV_EF_BITSTREAM | AV_EF_BUFFER | AV_EF_EXPLODE; dec->pkt_timebase = source_tb;
     if (!format.empty()) {
+        // FLAC STREAMINFO does not encode side versus back speaker identity.
+        // Restore the explicit wire layout before opening the reference decoder.
+        if (id == AV_CODEC_ID_FLAC && format.contains("channel_order")) {
+            uint64_t mask = 0; const auto& order = format.at("channel_order"); test(order.is_array() && !order.empty() && order.size() <= 8);
+            for (const auto& name : order) {
+                test(name.is_string()); auto channel = av_channel_from_string(name.get<std::string>().c_str());
+                test(channel >= 0 && channel < 64 && !(mask & (uint64_t(1) << channel))); mask |= uint64_t(1) << channel;
+            }
+            test(av_channel_layout_from_mask(&dec->ch_layout, mask) >= 0);
+            for (size_t ch = 0; ch < order.size(); ++ch) {
+                char name[16]; test(av_channel_name(name, sizeof(name), av_channel_layout_channel_from_index(&dec->ch_layout, ch)) >= 0); test(order[ch] == name);
+            }
+        }
         auto extra = unbase64(format.at("extradata_base64"));
         dec->extradata = static_cast<uint8_t*>(av_mallocz(extra.size() + AV_INPUT_BUFFER_PADDING_SIZE));
         std::memcpy(dec->extradata, extra.data(), extra.size()); dec->extradata_size = extra.size();
@@ -115,13 +130,38 @@ static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& pack
     auto receive = [&] {
         FramePtr frame(av_frame_alloc()); int r;
         while ((r = avcodec_receive_frame(dec.get(), frame.get())) >= 0) {
-            auto values = canonical(frame.get()); pcm.insert(pcm.end(), values.begin(), values.end()); av_frame_unref(frame.get());
+            if (measured) {
+                Json names = Json::array();
+                for (int ch = 0; ch < frame->ch_layout.nb_channels; ++ch) {
+                    char name[16]; test(av_channel_name(name, sizeof(name), av_channel_layout_channel_from_index(&frame->ch_layout, ch)) >= 0); names.push_back(name);
+                }
+                Json now{{"sample_rate", frame->sample_rate}, {"channel_order", names}, {"bits_per_sample", dec->bits_per_raw_sample}, {"profile", dec->profile}};
+                if (measured->empty()) {
+                    *measured = now;
+                    int64_t pts = frame->pts != AV_NOPTS_VALUE ? frame->pts : frame->best_effort_timestamp;
+                    (*measured)["first_pts"] = source_tb.num > 0 && pts != AV_NOPTS_VALUE ? Json(std::to_string(av_rescale_q(pts, source_tb, {1, frame->sample_rate}))) : Json(nullptr);
+                } else for (auto& [key, value] : now.items()) test(measured->at(key) == value);
+                (*measured)["decoded_frames"] = measured->value("decoded_frames", 0) + 1;
+                if (source_tb.num > 0 && frame->pts != AV_NOPTS_VALUE && !measured->at("first_pts").is_null()) {
+                    int64_t first = decimal<int64_t>(measured->at("first_pts"));
+                    auto before = pcm.size() / frame->ch_layout.nb_channels; test(before <= static_cast<size_t>(INT64_MAX) && first <= INT64_MAX - static_cast<int64_t>(before));
+                    int64_t expected = first + static_cast<int64_t>(before), observed = av_rescale_q(frame->pts, source_tb, {1, frame->sample_rate});
+                    long double difference = std::abs(static_cast<long double>(observed) - expected); test(difference < INT64_MAX);
+                    int64_t delta = static_cast<int64_t>(difference), previous = decimal<int64_t>(measured->value("max_abs_delta_samples", Json("0")));
+                    (*measured)["max_abs_delta_samples"] = std::to_string(std::max(delta, previous));
+                    int64_t tolerance = std::max<int64_t>(2, av_rescale_q(1, source_tb, {1, frame->sample_rate}));
+                    (*measured)["tolerance_samples"] = std::to_string(tolerance);
+                    if (delta > tolerance && !measured->contains("first_discontinuous_frame")) (*measured)["first_discontinuous_frame"] = measured->at("decoded_frames").get<int>() - 1;
+                }
+            }
+            if (trace && trace->size() < 32) trace->push_back({{"pts", frame->pts == AV_NOPTS_VALUE ? Json(nullptr) : Json(std::to_string(frame->pts))}, {"samples", frame->nb_samples}, {"rate", frame->sample_rate}, {"samples_before", std::to_string(pcm.size() / frame->ch_layout.nb_channels)}});
+            auto values = canonical(frame.get()); test(values.size() <= 16777216 - pcm.size()); pcm.insert(pcm.end(), values.begin(), values.end()); av_frame_unref(frame.get());
         }
         test(r == AVERROR_EOF || r == AVERROR(EAGAIN));
     };
     for (const auto& p : packets) {
         PacketPtr packet(av_packet_alloc()); test(av_new_packet(packet.get(), p.payload.size()) >= 0);
-        std::memcpy(packet->data, p.payload.data(), p.payload.size()); packet->pts = p.flags & 1 ? p.pts : AV_NOPTS_VALUE;
+        std::memcpy(packet->data, p.payload.data(), p.payload.size()); packet->pts = p.flags & 1 ? p.pts : AV_NOPTS_VALUE; packet->dts = p.flags & 2 ? p.dts : AV_NOPTS_VALUE;
         if (p.skip_start || p.skip_end) {
             auto* side = av_packet_new_side_data(packet.get(), AV_PKT_DATA_SKIP_SAMPLES, 10);
             test(side); AV_WL32(side, p.skip_start); AV_WL32(side + 4, p.skip_end); side[8] = side[9] = 0;
@@ -141,10 +181,10 @@ static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, c
         {"input", {{"codec", codec}, {"time_base", {{"num", 1}, {"den", rate}}}, {"extradata_base64", ""},
                    {"sample_rate_hint", nullptr}, {"bits_per_sample_hint", nullptr}, {"channel_order_hint", nullptr}}},
         {"output", {{"codec", "flac"}}}, {"timeline", {{"audible_from_us", "30000000"}}}, {"output_limit_bytes", "4194304"}};
-    if (!export_dir.empty() && variant == "base" && channels == 2) {
+    if (!export_dir.empty()) {
         Json fixture{{"start", start}, {"packets", Json::array()}};
         for (const auto& packet : input) fixture["packets"].push_back(base64(serialize(packet)));
-        std::ofstream(export_dir + "/" + codec + ".json") << fixture.dump();
+        std::ofstream(export_dir + "/" + codec + (channels != 2 ? "-" + std::to_string(channels) + "ch" : variant != "base" ? "-" + variant : "") + ".json") << fixture.dump();
     }
     Json format; std::vector<Packet> output;
     CodecPipeline pipeline(start, 1, 65536, [&](const Json& f) { test(format.empty()); format = f; },
@@ -182,17 +222,158 @@ static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, c
     rejects([&] { invalid.submit(wrong); }, "invalid_packet");
     std::cout << codec << " " << variant << " " << channels << "ch " << rate << "Hz: exact PCM " << samples << " samples; STREAMINFO before data; EOF/timeline/cancel PASS\n";
 }
+static void source_clock_regression() {
+    // Derived timestamps only from the authorized Matroska probe; no media fixture.
+    auto input = generate(AV_CODEC_ID_DTS, 2, 48000);
+    const int ticks[] = {0, 10, 21, 31, 42, 53, 63, 74, 85, 95, 106, 116};
+    Json start{{"type", "start"}, {"protocol", 1}, {"generation", "1"},
+        {"input", {{"codec", "dts"}, {"time_base", {{"num", 1}, {"den", 1000}}}, {"extradata_base64", ""},
+            {"sample_rate_hint", nullptr}, {"bits_per_sample_hint", nullptr}, {"channel_order_hint", nullptr}}},
+        {"output", {{"codec", "flac"}}}, {"timeline", {{"audible_from_us", "0"}}}};
+    CodecPipeline pipeline(start, 1, 65536, [](auto) {}, [](auto) {});
+    for (size_t i = 0; i < std::size(ticks); ++i) {
+        auto packet = input[i]; packet.pts = packet.dts = ticks[i]; packet.duration = 0;
+        if (i + 1 == std::size(ticks)) rejects([&] { pipeline.submit(packet); }, "timeline_discontinuity");
+        else pipeline.submit(packet);
+    }
+    std::cout << "source clock regression PASS: 64-sample discrepancy exceeds 48-sample tick; strict rejection preserved\n";
+}
+static void format_change_regression() {
+    auto first = generate(AV_CODEC_ID_TRUEHD, 2, 48000), changed = generate(AV_CODEC_ID_TRUEHD, 2, 96000);
+    Json start{{"type", "start"}, {"protocol", 1}, {"generation", "1"},
+        {"input", {{"codec", "truehd"}, {"time_base", {{"num", 1}, {"den", 48000}}}, {"extradata_base64", ""},
+            {"sample_rate_hint", nullptr}, {"bits_per_sample_hint", nullptr}, {"channel_order_hint", nullptr}}},
+        {"output", {{"codec", "flac"}}}, {"timeline", {{"audible_from_us", "0"}}}};
+    CodecPipeline pipeline(start, 1, 65536, [](auto) {}, [](auto) {});
+    for (const auto& packet : first) pipeline.submit(packet);
+    bool rejected = false;
+    for (auto packet : changed) {
+        packet.sequence += first.size();
+        try { pipeline.submit(packet); } catch (const Failure& error) { test(std::string(error.what()) == "format_changed"); rejected = true; break; }
+    }
+    test(rejected); std::cout << "real midstream TrueHD rate change PASS: format_changed, no resampling/reconfiguration\n";
+}
+// Test-only packets stay in RAM. The public result contains derived properties/hashes.
+static std::vector<uint8_t> packet_base64(const Json& value) {
+    test(value.is_string()); const auto& text = value.get_ref<const std::string&>();
+    test(text.size() <= ((1048640 + 2) / 3) * 4);
+    std::vector<uint8_t> bytes;
+    for (size_t offset = 0; offset < text.size(); offset += 65536) {
+        auto part = unbase64(text.substr(offset, 65536)); bytes.insert(bytes.end(), part.begin(), part.end());
+    }
+    return bytes;
+}
+static std::string pcm_hash(const std::vector<int32_t>& samples) {
+    std::vector<uint8_t> canonical_bytes(samples.size() * 4);
+    for (size_t i = 0; i < samples.size(); ++i) AV_WL32(canonical_bytes.data() + i * 4, static_cast<uint32_t>(samples[i]));
+    std::unique_ptr<AVSHA, decltype(&av_free)> sha(av_sha_alloc(), av_free); test(bool(sha));
+    test(av_sha_init(sha.get(), 256) == 0); av_sha_update(sha.get(), canonical_bytes.data(), canonical_bytes.size());
+    uint8_t digest[32]; av_sha_final(sha.get(), digest);
+    const char* hex = "0123456789abcdef"; std::string out;
+    for (auto byte : digest) { out += hex[byte >> 4]; out += hex[byte & 15]; }
+    return out;
+}
+static Json validate_remote(const Json& value) {
+    const auto& fixture = value.at("fixture"); const auto& observation = value.at("observation");
+    const auto& start = fixture.at("start"); const auto& format = observation.at("format");
+    const auto& end = observation.at("end"); auto generation = decimal<uint64_t>(start.at("generation"));
+    test(format.at("type") == "output_format" && format.at("codec") == "flac" && decimal<uint64_t>(format.at("generation")) == generation);
+    std::string name = start.at("input").at("codec");
+    AVCodecID id = name == "dts" ? AV_CODEC_ID_DTS : name == "truehd" ? AV_CODEC_ID_TRUEHD : name == "mlp" ? AV_CODEC_ID_MLP : AV_CODEC_ID_NONE;
+    test(id != AV_CODEC_ID_NONE);
+    AVRational tb{integer(start.at("input").at("time_base").at("num"), 1, 1000000000), integer(start.at("input").at("time_base").at("den"), 1, 1000000000)};
+    std::vector<Packet> input, output;
+    for (const auto& encoded : fixture.at("packets")) {
+        test(input.size() < 65536); input.push_back(parse_packet(packet_base64(encoded), 1, generation, input.size()));
+    }
+    int64_t next = decimal<int64_t>(end.at("first_pts")); uint64_t total = 0;
+    for (const auto& encoded : observation.at("packets")) {
+        test(output.size() < 65536); auto packet = parse_packet(packet_base64(encoded), 2, generation, output.size());
+        test(packet.pts == next && next <= INT64_MAX - packet.duration);
+        next += packet.duration; total = add(total, packet.duration); output.push_back(std::move(packet));
+    }
+    test(end.at("type") == "end_output" && decimal<uint64_t>(end.at("generation")) == generation);
+    test(decimal<uint64_t>(end.at("input_packets")) == input.size() && decimal<uint64_t>(end.at("output_packets")) == output.size());
+    test(total == decimal<uint64_t>(end.at("total_samples")) && next == decimal<int64_t>(end.at("end_pts_exclusive")));
+    Json source_format, actual_format;
+    auto reference = decode(id, input, start.at("input"), &source_format, tb);
+    auto actual = decode(AV_CODEC_ID_FLAC, output, format, &actual_format);
+    test(!reference.empty() && reference == actual);
+    if (fixture.value("expected_source_profile", "") == "dts-hd-ma") {
+        int profile = source_format.at("profile");
+        test(profile == AV_PROFILE_DTS_HD_MA || profile == AV_PROFILE_DTS_HD_MA_X || profile == AV_PROFILE_DTS_HD_MA_X_IMAX);
+        test(format.at("source_profile") == "dts-hd-ma");
+    }
+    test(source_format.at("sample_rate") == actual_format.at("sample_rate") && source_format.at("channel_order") == actual_format.at("channel_order"));
+    test(source_format.at("bits_per_sample") <= actual_format.at("bits_per_sample"));
+    for (const char* key : {"sample_rate", "channel_order", "bits_per_sample"}) test(format.at(key) == actual_format.at(key));
+    test(format.at("time_base").at("num") == 1 && format.at("time_base").at("den") == actual_format.at("sample_rate"));
+    test(source_format.at("first_pts") == end.at("first_pts"));
+    auto channels = actual_format.at("channel_order").size(); test(total * channels == actual.size());
+    return {{"status", "passed"}, {"criterion_id", "external_audio.host_pcm_equivalence.v1"},
+        {"codec", name}, {"sample_rate", format.at("sample_rate")}, {"channel_order", format.at("channel_order")},
+        {"bits_per_sample", format.at("bits_per_sample")}, {"valid_samples", std::to_string(total)},
+        {"first_pts", end.at("first_pts")}, {"end_pts_exclusive", end.at("end_pts_exclusive")},
+        {"reference_pcm_sha256", pcm_hash(reference)}, {"output_pcm_sha256", pcm_hash(actual)}, {"physical_acceptance", false}};
+}
+static Json inspect_source(const Json& fixture) {
+    const auto& input = fixture.at("start").at("input"); std::string name = input.at("codec");
+    AVCodecID id = name == "dts" ? AV_CODEC_ID_DTS : name == "truehd" ? AV_CODEC_ID_TRUEHD : name == "mlp" ? AV_CODEC_ID_MLP : AV_CODEC_ID_NONE; test(id != AV_CODEC_ID_NONE);
+    auto generation = decimal<uint64_t>(fixture.at("start").at("generation")); std::vector<Packet> packets;
+    for (const auto& p : fixture.at("packets")) packets.push_back(parse_packet(packet_base64(p), 1, generation, packets.size()));
+    Json measured, trace = Json::array(); AVRational tb{integer(input.at("time_base").at("num"), 1, 1000000000), integer(input.at("time_base").at("den"), 1, 1000000000)};
+    auto pcm = decode(id, packets, input, &measured, tb, &trace);
+    Json groups = Json::array(); bool groups_truncated = false;
+    if (fixture.contains("demux_positions")) {
+        test(fixture.at("demux_positions").size() == packets.size());
+        for (size_t i = 0; i < packets.size(); ++i) {
+            int64_t position = decimal<int64_t>(fixture.at("demux_positions")[i]);
+            if (groups.empty() || position < 0 || groups.back().at("position_bytes") != std::to_string(position)) {
+                if (groups.size() >= 64) { groups_truncated = true; break; }
+                groups.push_back({{"position_bytes", std::to_string(position)}, {"first_sequence", std::to_string(i)}, {"input_packets", 0}, {"first_pts", std::to_string(packets[i].pts)}, {"last_pts", std::to_string(packets[i].pts)}});
+            }
+            groups.back()["input_packets"] = groups.back().at("input_packets").get<int>() + 1;
+            groups.back()["last_pts"] = std::to_string(packets[i].pts);
+        }
+    }
+    int profile = measured.at("profile"); measured.erase("profile");
+    measured["source_profile"] = profile == AV_PROFILE_DTS_HD_MA || profile == AV_PROFILE_DTS_HD_MA_X || profile == AV_PROFILE_DTS_HD_MA_X_IMAX ? "dts-hd-ma" : name;
+    return {{"status", "passed"}, {"criterion_id", "external_audio.host_source_timeline.v1"},
+        {"format", measured}, {"trace", trace}, {"time_base", input.at("time_base")},
+        {"demux_position_groups", groups}, {"demux_groups_truncated", groups_truncated},
+        {"trace_truncated", measured.at("decoded_frames").get<size_t>() > trace.size()},
+        {"source_timeline_accepted", !measured.contains("first_discontinuous_frame")},
+        {"valid_samples", std::to_string(pcm.size() / measured.at("channel_order").size())}, {"canonical_pcm_sha256", pcm_hash(pcm)}};
+}
+static int remote_validation_stdin(bool inspect = false) {
+    try {
+        std::string text; char block[8192];
+        while (std::cin.read(block, sizeof(block)) || std::cin.gcount()) {
+            test(text.size() + std::cin.gcount() <= 64 * 1024 * 1024); text.append(block, std::cin.gcount());
+        }
+        std::cout << (inspect ? inspect_source(Json::parse(text)) : validate_remote(Json::parse(text))).dump() << '\n'; return 0;
+    } catch (const std::exception& error) {
+        Json failure{{"status", "failed"}, {"code", "output_validation_failed"}};
+        std::string text = error.what(), prefix = "test assertion failed at line ";
+        if (text.starts_with(prefix) && text.size() < 64 && std::all_of(text.begin() + prefix.size(), text.end(), [](char c) {return c >= '0' && c <= '9';})) failure["check_line"] = std::stoi(text.substr(prefix.size()));
+        std::cout << failure.dump() << '\n'; return 1;
+    }
+}
 int main(int argc, char** argv) {
     av_log_set_level(AV_LOG_QUIET);
+    if (argc == 2 && std::string(argv[1]) == "--inspect-source") return remote_validation_stdin(true);
+    if (argc == 2 && std::string(argv[1]) == "--validate-remote") return remote_validation_stdin();
     try {
         test(argc == 2 || argc == 3); if (argc == 3) { export_dir = argv[2]; std::filesystem::create_directories(export_dir); } pure(argv[1]); CodecPipeline::selfcheck();
         roundtrip(AV_CODEC_ID_TRUEHD, "truehd", 2, 48000);
         roundtrip(AV_CODEC_ID_MLP, "mlp", 2, 96000);
         roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000);
+        roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000);
         roundtrip(AV_CODEC_ID_TRUEHD, "truehd", 2, 48000, "negative");
         roundtrip(AV_CODEC_ID_TRUEHD, "truehd", 2, 48000, "missing-after-anchor");
         roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000, "skip-samples");
         roundtrip(AV_CODEC_ID_MLP, "mlp", 6, 96000);
+        source_clock_regression(); format_change_regression();
         std::cout << "core checks PASS (DTS-HD MA hardware fixture remains required)\n";
     } catch (const std::exception& e) { std::cerr << "core checks FAILED: " << e.what() << '\n'; return 1; }
 }

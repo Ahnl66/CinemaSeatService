@@ -45,6 +45,7 @@ try:
     run('asan-configure', ['cmake', '-S', ROOT, '-B', scratch / 'asan', '-DCSAD_DEPS=' + str(test), '-DCSAD_SANITIZERS=address,undefined', '-DCMAKE_BUILD_TYPE=Debug'])
     run('asan-build', ['cmake', '--build', scratch / 'asan', '--target', 'core_tests', '-j', '4'])
     run('asan-core', [scratch / 'asan/core_tests', ROOT / 'tests/fixtures'])
+    run('remote-pcm', [sys.executable, ROOT / 'tests/integration/remote_validation_tests.py', binary, scratch / 'host/core_tests', scratch / 'host/fixture_export', scratch / 'generated', scratch])
     run('logging', [sys.executable, ROOT / 'tests/integration/logging_tests.py', binary, scratch / 'generated', scratch])
     run('transport', [sys.executable, ROOT / 'tests/integration/transport_tests.py', binary, scratch / 'generated', scratch])
     if args.all:
@@ -52,8 +53,8 @@ try:
             incomplete('containers-amd64-arm64', 'Docker absent on this host; user prohibits installing it here. Run native on external servers.')
         else:
             run('docker-version', ['docker', 'version'])
-            run('docker-native-build', ['docker', 'build', '-f', ROOT / 'docker/Dockerfile', '-t', 'cinemaseat-audio-decoder:0.1.1', ROOT], timeout=1800)
-            run('docker-native-registry', ['docker', 'run', '--rm', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', 'cinemaseat-audio-decoder:0.1.1', '--codec-registry'])
+            run('docker-native-build', ['docker', 'build', '-f', ROOT / 'docker/Dockerfile', '-t', 'cinemaseat-audio-decoder:0.1.2', ROOT], timeout=1800)
+            run('docker-native-registry', ['docker', 'run', '--rm', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', 'cinemaseat-audio-decoder:0.1.2', '--codec-registry'])
             run('docker-native-runtime', [sys.executable, ROOT / 'scripts/container_checks.py', scratch])
             incomplete('container-audio', 'Native container audio roundtrip and both target hardware endurance runs remain required.')
             incomplete('other-native-architecture', 'One native build cannot prove both amd64 and arm64; collect separate native server evidence.')

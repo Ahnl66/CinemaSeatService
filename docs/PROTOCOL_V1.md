@@ -50,7 +50,7 @@ one session generation. Heartbeat operates in every non-closed state.
 ```json
 {
   "type":"hello", "protocol":1,
-  "session_id":"random-uuid", "service_version":"0.1.1",
+  "session_id":"random-uuid", "service_version":"0.1.2",
   "limits":{"packet_payload_bytes":1048576,"control_message_bytes":65536},
   "input_limit_bytes":"4194304"
 }
@@ -170,7 +170,10 @@ existing fMP4 muxer.
 
 Map the actual decoder layout to FLAC's fixed channel order and report it
 explicitly. Only representable layouts are allowed; channel count alone is not
-enough. A deterministic permutation is allowed if channel-impulse fixtures prove
+enough. STREAMINFO does not distinguish side from back speaker identities. A client
+MUST restore the explicit `channel_order` in its decoder/mux codec parameters;
+it must not infer speaker positions from the STREAMINFO channel count. Supported
+native side/back variants retain their speaker identities without relabeling. A deterministic permutation is allowed if channel-impulse fixtures prove
 it. Never use a mix matrix or default to stereo.
 
 Timeline contract:

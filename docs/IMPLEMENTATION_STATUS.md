@@ -1,6 +1,6 @@
 # Implementation status
 
-Updated: 2026-11-01. **Partially implemented; full acceptance is not established.**
+Updated: 2026-11-01; local development candidate 0.1.2. **Partially implemented; full acceptance is not established.**
 The standalone native service converts tested codec packets into FLAC. CinemaSeat
 external-audio integration is not implemented. No production route, settings or
 backup export has changed. This is a private development source repository.
@@ -11,7 +11,7 @@ backup export has changed. This is a private development source repository.
 | --- | --- | --- |
 | 0 — Baseline | Complete | [BASELINE.md](BASELINE.md): implementation HEAD f083bb1, initially clean index/worktree; current backup 5 / DB 7 and bridge contracts inspected. |
 | 1 — Protocol and codec core | Partially proven | Real DTS core/TrueHD/MLP roundtrips and pure protocol tests pass. DTS-HD MA, 7.1, layout coverage and additional failure fixtures are missing. The SVC-03 gate is not met. |
-| 2 — Transport and Docker | Independent service/host implementation prepared; not accepted | Beast service, settings, logging, lifecycle, concurrency and sanitizer checks pass on arm64 macOS. Dockerfile and root Dockge Compose file exist; neither native Linux image is tested. This does not bypass missing phase-1 evidence. |
+| 2 — Transport and Docker | Independent service/host implementation prepared; not accepted | Beast service, settings, logging, lifecycle, concurrency and sanitizer checks pass on arm64 macOS. Dockerfile and root Dockge Compose file exist; an isolated native arm64 candidate has been built/tested; amd64 remains open. This does not bypass missing phase-1 evidence. |
 | 3 — Diagnose and hardware | Not started | Finish the phase-1 codec matrix. Reusable CS client/native bridge, preheader/mux integration, source-gated Diagnose test, report/schema/validator/UI/analysis guide are missing. The user reports an Armbian ODROID-N2+ at odroidn2.local and a physical Apple TV available; access and execution are not verified. |
 | 4 — Standard production integration | Blocked by acceptance gate | Only after phase 3 passes. No settings/availability/fallback/HLS/export changes have been applied. |
 | 5 — Full acceptance | Open | Standalone host build proven; historical app verification recorded separately. New APP-01 through APP-05 and physical acceptance remain open. |
@@ -24,11 +24,11 @@ A passing host subset never makes an entire acceptance criterion pass.
 
 | Requirement | Status / exact coverage |
 | --- | --- |
-| SVC-01 standalone amd64/arm64 container | Not executed. Native arm64 macOS build outside the app folder and exact runtime codec registry pass. |
+| SVC-01 standalone amd64/arm64 container | Partially proven on native arm64; full two-architecture acceptance remains open. Native arm64 macOS build and exact runtime registry pass. Running ODROID 0.1.1 is independently confirmed Linux/aarch64 with an arm64 image, read-only root, UID/GID 10001, dropped capabilities and the exact runtime codec registry. A fresh 0.1.2 native arm64 image and isolated runtime now pass component checks. Native amd64 remains untested. |
 | SVC-02 protocol/interoperability/limits | Host subset passes: golden vector, negative/64-bit values, strict JSON/base64, packet limits, sequences/generations, capacity, controls and credits. Swift interoperability and the complete adversarial matrix are missing. |
-| SVC-03 PCM equivalence including DTS-HD MA | Host subset passes: DTS core stereo 48 kHz, TrueHD stereo 48 kHz, MLP stereo/5.1(back) 96 kHz. DTS-HD MA, 7.1 and broader rate/precision coverage are untested. |
-| SVC-04 timing/priming/EOF/failures | Host subset passes: 30-second source anchor, negative PTS, missing PTS after anchoring, missing_timeline, discontinuity, decoder trims of 5+7 samples, actual encoder delay/EOF tail. Forced EAGAIN, midstream format and leading-fragment fixtures are missing. |
-| SVC-05 backpressure/cancel/multisession/cleanup | Host subset passes: two concurrent sessions, full output queue/no new credit, controls/cancel, heartbeat across a short pause, start timeout, shutdown and slot recovery. TSAN reports no race. Long pause/half-open/endurance/RSS tests remain open. |
+| SVC-03 PCM equivalence including DTS-HD MA | Host subset passes: DTS core stereo 48 kHz, TrueHD stereo 48 kHz, MLP stereo/5.1(back) 96 kHz. Short ODROID 0.1.1 PCM checks also pass for supported fixtures. The authorized DTS-HD MA reference decodes fully at 5.1(side)/48 kHz/16-bit, but its original timestamps fail the strict timeline; a complete service roundtrip for that source and 7.1 remain unaccepted. |
+| SVC-04 timing/priming/EOF/failures | Host subset passes: 30-second source anchor, negative PTS, missing PTS after anchoring, missing_timeline, discontinuity, decoder trims of 5+7 samples, actual encoder delay/EOF tail. A real TrueHD rate-change regression and the observed Matroska discrepancy are now covered. Forced EAGAIN and leading-fragment fixtures remain missing. |
+| SVC-05 backpressure/cancel/multisession/cleanup | Host subset passes: two concurrent sessions, full output queue/no new credit, controls/cancel, heartbeat across a short pause, start timeout, shutdown and slot recovery. TSAN reports no race. Short ODROID one/two/four-session tests pass with slot recovery. Long pause/half-open/endurance/peak-RSS tests remain open. |
 | APP-01 settings/Full/disabled | New feature not implemented; app unchanged. Baseline checks are separate. |
 | APP-02 routes/availability/fallback | Not executed; no external route activated. |
 | APP-03 preheader/FLAC/fMP4/player item | Not executed. Service STREAMINFO before output is host-proven, but this does not prove native fMP4 headers or AVPlayerItem acceptance. |
@@ -70,12 +70,24 @@ A passing host subset never makes an entire acceptance criterion pass.
 
 ## Known implementation limits
 
-Canonical FLAC speaker layouts are validated strictly; side-only 5.1 and float
-are currently rejected. The pinned service build rejects lossy XLL recovery,
+Canonical FLAC speaker layouts are validated strictly; supported native side/back layouts are preserved explicitly in the local 0.1.2 candidate; float remains rejected. The pinned service build rejects lossy XLL recovery,
 which can prevent DTS-HD priming. There is no silent DTS-core fallback, downmix,
 AAC, resampling or disk spool, and no claim of complete DTS-HD support.
 
 Debug events contain wall time and queue high-water marks. Server CPU/RSS and
-thermal behavior still need external measurement. Container-runtime checks and
-the component benchmark script are prepared but unexecuted on target Linux
-hardware. Project licensing and public distribution remain open.
+thermal behavior still need external measurement. The running 0.1.1 arm64 container and short component tests are now observed on the ODROID. A long target benchmark and a deployment update of the existing stack are still unexecuted. Project licensing and public distribution remain open.
+
+## ODROID follow-up
+
+See [ODROID_2026-11-01.md](evidence/ODROID_2026-11-01.md). One/two/four short-session
+PCM checks are component evidence, not HW-01/HW-02 acceptance. The local 0.1.2
+candidate fixes explicit side-layout support and strengthens host verification;
+it has been tested in an isolated native arm64 container without replacing the existing stack. The supplied source shows a 64-sample timing
+discrepancy against a 48-sample allowed tick at 116 ms. The strict rejection remains
+in place. No source rebias, gap fill, drop or timing-tolerance relaxation is applied.
+
+The isolated native arm64 0.1.2 candidate passes 8/16/32 short checks at one/two/four
+sessions, plus 35-second credit starvation with two heartbeats and ~7.4 ms cancel.
+The temporary container is removed. Actual Matroska block anchors remain within
+±16 samples while inferred lace timestamps reach an 80-sample difference. Diagnose
+must investigate that distinction before any external-route timing adaptation.

@@ -5,6 +5,8 @@ from pathlib import Path
 
 class Peer:
     def __init__(self, port, origin=None, protocol='cs-audio.v1', host='127.0.0.1'):
+        self.lock = threading.Lock()
+        self.ping_count = 0
         self.socket = socket.create_connection((host, port), timeout=5)
         self.socket.settimeout(5)
         key = base64.b64encode(os.urandom(16)).decode()
@@ -22,7 +24,6 @@ class Peer:
             assert accept in response and b'cs-audio.v1' in response
             self.hello = self.receive()
             assert self.hello['type'] == 'hello'
-        self.lock = threading.Lock()
 
     def exact(self, n):
         result = b''
@@ -69,6 +70,7 @@ class Peer:
             body = self.exact(n)
             kind = a & 15
             if kind == 9:
+                self.ping_count += 1
                 self.send(body, opcode=10)
                 continue
             if kind == 10:
@@ -96,15 +98,15 @@ class Peer:
     def close(self):
         self.socket.close()
 
-def request(port, path, method='GET'):
-    connection = http.client.HTTPConnection('127.0.0.1', port, timeout=3)
+def request(port, path, method='GET', host='127.0.0.1'):
+    connection = http.client.HTTPConnection(host, port, timeout=3)
     connection.request(method, path)
     response = connection.getresponse()
     result = response.status, json.loads(response.read(65537))
     connection.close()
     return result
 
-def transcode(port, fixture, cancel=False, host='127.0.0.1'):
+def transcode(port, fixture, cancel=False, host='127.0.0.1', observe=None):
     began = time.monotonic()
     peer = Peer(port, host=host)
     assert peer.status == 101
@@ -143,6 +145,7 @@ def transcode(port, fixture, cancel=False, host='127.0.0.1'):
     format_seen = False
     rate = None
     first_output_seconds = None
+    completed = False
     try:
         for _ in range(10000):
             value = peer.receive()
@@ -153,6 +156,8 @@ def transcode(port, fixture, cancel=False, host='127.0.0.1'):
                 _, version, kind, flags, generation, sequence, pts, dts, duration, size, ss, se, reserved = struct.unpack('>4sBBHQQqqqIIII', value[:64])
                 assert (version, kind, flags, generation, sequence, dts, size, ss, se, reserved) == (1, 2, 3, 1, count, pts, len(value) - 64, 0, 0, 0)
                 assert duration > 0 and (next_pts is None or pts == next_pts)
+                if observe is not None:
+                    observe('packet', value)
                 next_pts = pts + duration
                 samples += duration
                 count += 1
@@ -160,7 +165,7 @@ def transcode(port, fixture, cancel=False, host='127.0.0.1'):
                 if cancel and total_bytes > 4000:
                     # Withhold credit until the encoder/output queue is blocked.
                     time.sleep(.3)
-                    assert request(port, '/healthz')[0] == 200
+                    assert request(port, '/healthz', host=host)[0] == 200
                     peer.send({'type': 'cancel', 'generation': '1'})
                     peer.until('cancelled')
                     return
@@ -171,6 +176,8 @@ def transcode(port, fixture, cancel=False, host='127.0.0.1'):
                     condition.notify_all()
             elif value['type'] == 'output_format':
                 assert not format_seen and len(base64.b64decode(value['extradata_base64'])) == 34
+                if observe is not None:
+                    observe('format', value)
                 format_seen = True
                 rate = value['sample_rate']
             elif value['type'] == 'end_output':
@@ -178,7 +185,10 @@ def transcode(port, fixture, cancel=False, host='127.0.0.1'):
                 assert int(value['output_packets']) == count
                 assert int(value['end_pts_exclusive']) == next_pts
                 assert not cancel
+                if observe is not None:
+                    observe('end', value)
                 peer.send(struct.pack('>H', 1000), opcode=8)
+                completed = True
                 return {'valid_samples': samples, 'sample_rate': rate, 'output_packets': count, 'output_bytes': total_bytes, 'wall_seconds': time.monotonic() - began, 'first_output_seconds': first_output_seconds}
             else:
                 raise AssertionError(value)
@@ -190,7 +200,9 @@ def transcode(port, fixture, cancel=False, host='127.0.0.1'):
         peer.close()
         thread.join(timeout=6)
         assert not thread.is_alive()
-        if not cancel:
+        # A producer broken pipe during teardown must not replace the primary
+        # service/protocol failure already raised by receive.
+        if not cancel and completed:
             assert not errors, errors
 
 def run(binary, fixture_dir, scratch):

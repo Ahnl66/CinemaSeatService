@@ -1,4 +1,4 @@
-# Deployment — development 0.1.1
+# Deployment — development candidate 0.1.2
 
 The service runs independently. CinemaSeat production integration and the Diagnose
 connection are not implemented or accepted. The host test client can use the
@@ -59,12 +59,12 @@ docker compose -f docker-compose.yml build
 ```
 
 The first build downloads pinned upstream sources and compiles FFmpeg and the
-service natively. Allow it to finish before deploying. This build has not yet
-been tested on this ODROID, so record and share any build error without treating
-the instructions as hardware acceptance.
+service natively. Allow it to finish before deploying. An isolated native arm64 candidate has now passed this build procedure and short
+component checks on the ODROID. Record build errors and do not treat that result
+as sustained playback or physical acceptance.
 
 The root Compose file has `pull_policy: never`: Dockge uses the locally built
-`cinemaseat-audio-decoder:0.1.1` image. It does not try to pull an unpublished
+`cinemaseat-audio-decoder:0.1.2` image. It does not try to pull an unpublished
 image, and it does not need access to the private Git repository itself.
 
 ### 4. Deploy in Dockge
@@ -120,8 +120,8 @@ because no service image is published. Active sessions stop during an update.
 
 ## Container configuration
 
-The same Dockerfile is intended for native amd64 and arm64. Neither architecture
-has been accepted on Linux yet. Do not use emulation for performance acceptance.
+The same Dockerfile is intended for native amd64 and arm64. An isolated native arm64 candidate has now been built and component-tested on
+the ODROID; native amd64 and full hardware acceptance remain open. Do not use emulation for performance acceptance.
 Record architecture, Docker version, image ID/digest, OS/kernel, RAM, limits, CPU,
 temperature and background load for each benchmark. Another server's build does
 not establish a sustained session on a DS923+ or ODROID-N2+.
@@ -187,8 +187,8 @@ not report contents. The Docker image intentionally contains no Python test runn
 - Host-proven: DTS core stereo, TrueHD stereo, MLP stereo and MLP 5.1(back), exact
   PCM roundtrip, streaming STREAMINFO, 4096-sample FLAC blocks and exact tail,
   source anchors, missing PTS after anchoring, negative PTS and skip samples.
-- Only canonical FLAC layouts are accepted. Side-only 5.1, float, custom/height
-  layouts and midstream format changes fail explicitly.
+- Only canonical FLAC layouts are accepted. Supported native side/back layouts retain their explicit speaker identities.
+  Float, custom/height layouts and midstream format changes fail explicitly.
 - DTS uses the pinned fixed-point reference decode. Lossy XLL recovery is rejected;
   this can block multichannel DTS-HD startup. No DTS-HD MA support claim is made
   until representative fixtures pass.
@@ -210,3 +210,10 @@ Component success never establishes audible or visible presentation.
 - [Official installation and existing-stack discovery](https://github.com/louislam/dockge#can-i-manage-existing-stacks)
 - [Official stacks-directory mount configuration](https://github.com/louislam/dockge/blob/master/compose.yaml)
 - [Accepted Compose filenames in Dockge](https://github.com/louislam/dockge/blob/master/common/util-common.ts)
+
+## Remote codec verification
+
+See [REMOTE_TESTS.md](REMOTE_TESTS.md) for the reusable RAM-only audio checks and
+[ODROID evidence](evidence/ODROID_2026-11-01.md) for actual target observations.
+Version 0.1.2 has been built and tested in an isolated ODROID candidate container;
+the existing Dockge stack was left at 0.1.1 during those tests. Updating an existing device is a separate deployment action.

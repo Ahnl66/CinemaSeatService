@@ -1,3 +1,15 @@
+# 0.1.2 — 2026-11-01 (development candidate)
+
+- Added explicit native side/back FLAC layout preservation, including DTS 5.1(side),
+  without changing samples, channel identities, rate or precision.
+- Added reusable remote PCM/layout/timeline validation, CRC and corruption
+  regressions, and bounded local-source extraction for authorized codec fixtures.
+- Added regression coverage for midstream TrueHD rate changes and the observed
+  Matroska timestamp discrepancy. Strict source-timeline rejection is preserved.
+- ODROID 0.1.1 passes short synthetic one/two/four-session component checks.
+  The authorized DTS-HD source remains outside the strict timeline tolerance.
+  Production integration and full hardware acceptance remain open.
+
 # 0.1.1 — 2026-11-01 (development snapshot)
 
 - Added a root `docker-compose.yml` and installation instructions for Dockge on
@@ -9,15 +21,19 @@
 # CinemaSeat Audio Decoder
 
 A standalone headless C++20 service that converts demuxed DTS/TrueHD/MLP packets
-into FLAC. Audio stays in RAM. Development version **0.1.1**.
+into FLAC. Audio stays in RAM. Development candidate **0.1.2**. The baseline stack was 0.1.1; an isolated 0.1.2
+arm64 candidate has also been built and tested without replacing that stack.
 
 **Status: working native service and host tests; partial acceptance only.**
 CinemaSeat production integration and the Diagnose route are not implemented.
-Native amd64/arm64 Docker builds, DTS-HD MA and physical acceptance remain open.
+The native arm64 candidate and short codec tests pass. Native amd64, a complete
+original-timestamp DTS-HD MA service pass and physical acceptance remain open.
 
 - [Install with Dockge on the ODROID](docs/DEPLOYMENT.md#dockge-on-the-odroid-n2)
 - [Root Compose file](docker-compose.yml)
 - [Implementation status and evidence matrix](docs/IMPLEMENTATION_STATUS.md)
+- [ODROID results and exact limitations](docs/evidence/ODROID_2026-11-01.md)
+- [Remote codec checks](docs/REMOTE_TESTS.md)
 - [Host evidence](docs/evidence/HOST_2026-11-01.md)
 - [Implementation baseline](docs/BASELINE.md)
 - [Technical design and phases](docs/TECHNICAL_DESIGN.md)

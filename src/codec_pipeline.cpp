@@ -76,10 +76,15 @@ void CodecPipeline::decode_frames() {
 }
 static Json channel_names(const AVChannelLayout& layout) {
     require(layout.order == AV_CHANNEL_ORDER_NATIVE && av_channel_layout_check(&layout), "unsupported_format");
-    // FLAC's fixed channel order; count-only, height and custom layouts are refused.
+    // Preserve FFmpeg-supported native FLAC order, including side/back layouts.
+    // STREAMINFO carries channel count only: clients MUST retain channel_order.
     static const uint64_t masks[] = {AV_CH_LAYOUT_MONO, AV_CH_LAYOUT_STEREO, AV_CH_LAYOUT_SURROUND,
         AV_CH_LAYOUT_QUAD, AV_CH_LAYOUT_5POINT0_BACK, AV_CH_LAYOUT_5POINT1_BACK, AV_CH_LAYOUT_6POINT1, AV_CH_LAYOUT_7POINT1};
-    require(layout.nb_channels >= 1 && layout.nb_channels <= 8 && layout.u.mask == masks[layout.nb_channels - 1], "unsupported_format");
+    bool native_flac = layout.nb_channels >= 1 && layout.nb_channels <= 8 && layout.u.mask == masks[layout.nb_channels - 1];
+    bool explicit_side = (layout.nb_channels == 4 && layout.u.mask == AV_CH_LAYOUT_2_2) ||
+        (layout.nb_channels == 5 && layout.u.mask == AV_CH_LAYOUT_5POINT0) ||
+        (layout.nb_channels == 6 && layout.u.mask == AV_CH_LAYOUT_5POINT1);
+    require(native_flac || explicit_side, "unsupported_format");
     Json names = Json::array();
     for (int i = 0; i < layout.nb_channels; ++i) {
         char name[16]; ok(av_channel_name(name, sizeof(name), av_channel_layout_channel_from_index(&layout, i)), "unsupported_format"); names.push_back(name);
@@ -108,7 +113,7 @@ void CodecPipeline::open_encoder(AVFrame* frame) {
     uint64_t stream = AV_RB64(encoder->extradata + 10);
     require(int(stream >> 44) == encoder->sample_rate && int(((stream >> 41) & 7) + 1) == frame->ch_layout.nb_channels && int(((stream >> 36) & 31) + 1) == encoder->bits_per_raw_sample, "encode_failed");
     fifo.reset(av_audio_fifo_alloc(packed, frame->ch_layout.nb_channels, fifo_cap)); require(bool(fifo), "internal_error");
-    input_format = frame->format;
+    input_format = frame->format; input_precision = precision;
     const char* profile = decoder->codec_id == AV_CODEC_ID_DTS ? "dts" : decoder->codec_id == AV_CODEC_ID_TRUEHD ? "truehd" : "mlp";
     if (decoder->profile == AV_PROFILE_DTS_HD_MA || decoder->profile == AV_PROFILE_DTS_HD_MA_X || decoder->profile == AV_PROFILE_DTS_HD_MA_X_IMAX) profile = "dts-hd-ma";
     format = {{"type", "output_format"}, {"generation", std::to_string(generation)}, {"codec", "flac"},
@@ -120,7 +125,7 @@ void CodecPipeline::open_encoder(AVFrame* frame) {
 void CodecPipeline::decoded(AVFrame* frame) {
     require(frame->nb_samples > 0 && frame->nb_samples <= fifo_cap, "limit_exceeded");
     if (!encoder) open_encoder(frame);
-    require(frame->sample_rate == encoder->sample_rate && frame->format == input_format && av_channel_layout_compare(&frame->ch_layout, &encoder->ch_layout) == 0, "format_changed");
+    require(frame->sample_rate == encoder->sample_rate && frame->format == input_format && decoder->bits_per_raw_sample == input_precision && av_channel_layout_compare(&frame->ch_layout, &encoder->ch_layout) == 0, "format_changed");
     int64_t timestamp = frame->pts != AV_NOPTS_VALUE ? frame->pts : frame->best_effort_timestamp;
     if (!anchored) {
         require(timestamp != AV_NOPTS_VALUE, "missing_timeline");
