@@ -41,6 +41,14 @@ def run(binary, validator, exporter, fixtures, scratch, source=None, expect_sour
                 print('Source-clock rejection regression PASS; source playback remains rejected')
             elif result.returncode:
                 raise RuntimeError('remote_pcm_check_failed')
+            # Metadata-only recovery inspection must not accept a core-only or
+            # non-DTS fixture as complete full-HD material.
+            for name in ['dts', 'truehd']:
+                candidate = json.loads((fixtures / (name + '.json')).read_text())
+                probe_result = subprocess.run([str(validator), '--inspect-after-recovery'], input=json.dumps(candidate), text=True, capture_output=True, timeout=30)
+                proof = json.loads(probe_result.stdout)
+                assert probe_result.returncode != 0 and proof['status'] == 'failed'
+                assert proof['decoder_observation']['xll_recovery_requested'] == '0'
             # Corrupt returned metadata/packet/timeline independently; no weakening
             # of the checker to obtain a positive result is allowed.
             fixture = json.loads((fixtures / 'mlp-6ch.json').read_text())

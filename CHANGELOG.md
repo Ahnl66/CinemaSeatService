@@ -1,3 +1,12 @@
+# 0.1.3 — 2026-11-01 (host diagnostic snapshot)
+
+- Bug fix: preserve source format hints and sanitized decoder-failure evidence
+  when reference decoding fails before a service session starts.
+- Add bounded, metadata-only DTS-HD inspection after rejected XLL recovery,
+  explicitly retaining missing leading coverage and failed source acceptance.
+- Record the authorized ODROID 0.1.2 deployment and the observed DTS-HD MA
+  7.1/48 kHz/24-bit source startup limitation. Runtime codec policy is unchanged.
+
 # 0.1.2 — development candidate, 2026-11-01
 
 - Support explicit native side/back FLAC layouts, including DTS 5.1(side), while

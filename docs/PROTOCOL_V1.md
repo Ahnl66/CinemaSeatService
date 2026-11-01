@@ -50,7 +50,7 @@ one session generation. Heartbeat operates in every non-closed state.
 ```json
 {
   "type":"hello", "protocol":1,
-  "session_id":"random-uuid", "service_version":"0.1.2",
+  "session_id":"random-uuid", "service_version":"0.1.3",
   "limits":{"packet_payload_bytes":1048576,"control_message_bytes":65536},
   "input_limit_bytes":"4194304"
 }

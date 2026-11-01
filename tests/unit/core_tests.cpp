@@ -16,6 +16,12 @@ extern "C" {
 #include <libavutil/sha.h>
 }
 using namespace csad;
+static std::atomic<uint64_t> observed_xll_recovery{0};
+static void policy_log(void*, int, const char* format, va_list) {
+    // Recognize only a fixed upstream marker. Never format or retain raw logs.
+    if (std::strcmp(format, "Forcing XLL recovery mode\n") == 0) ++observed_xll_recovery;
+}
+
 static void test(bool b, std::source_location at = std::source_location::current()) { if (!b) throw std::runtime_error("test assertion failed at line " + std::to_string(at.line())); }
 template<class F> static void rejects(F f, const char* code = nullptr) {
     try { f(); } catch (const Failure& e) { if (code) test(e.what() == std::string(code)); return; }
@@ -146,7 +152,7 @@ static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& pack
                     int64_t first = decimal<int64_t>(measured->at("first_pts"));
                     auto before = pcm.size() / frame->ch_layout.nb_channels; test(before <= static_cast<size_t>(INT64_MAX) && first <= INT64_MAX - static_cast<int64_t>(before));
                     int64_t expected = first + static_cast<int64_t>(before), observed = av_rescale_q(frame->pts, source_tb, {1, frame->sample_rate});
-                    long double difference = std::abs(static_cast<long double>(observed) - expected); test(difference < INT64_MAX);
+                    uint64_t difference = observed >= expected ? static_cast<uint64_t>(observed) - static_cast<uint64_t>(expected) : static_cast<uint64_t>(expected) - static_cast<uint64_t>(observed); test(difference < static_cast<uint64_t>(INT64_MAX));
                     int64_t delta = static_cast<int64_t>(difference), previous = decimal<int64_t>(measured->value("max_abs_delta_samples", Json("0")));
                     (*measured)["max_abs_delta_samples"] = std::to_string(std::max(delta, previous));
                     int64_t tolerance = std::max<int64_t>(2, av_rescale_q(1, source_tb, {1, frame->sample_rate}));
@@ -345,15 +351,62 @@ static Json inspect_source(const Json& fixture) {
         {"source_timeline_accepted", !measured.contains("first_discontinuous_frame")},
         {"valid_samples", std::to_string(pcm.size() / measured.at("channel_order").size())}, {"canonical_pcm_sha256", pcm_hash(pcm)}};
 }
-static int remote_validation_stdin(bool inspect = false) {
+static Json inspect_after_recovery(const Json& fixture) {
+    const auto& input = fixture.at("start").at("input"); test(input.at("codec") == "dts");
+    auto generation = decimal<uint64_t>(fixture.at("start").at("generation"));
+    AVRational tb{integer(input.at("time_base").at("num"), 1, 1000000000), integer(input.at("time_base").at("den"), 1, 1000000000)};
+    CodecPtr decoder(avcodec_alloc_context3(avcodec_find_decoder(AV_CODEC_ID_DTS))); test(bool(decoder));
+    decoder->thread_count = 1; decoder->flags |= AV_CODEC_FLAG_BITEXACT; decoder->pkt_timebase = tb;
+    decoder->err_recognition = AV_EF_CRCCHECK | AV_EF_BITSTREAM | AV_EF_BUFFER | AV_EF_EXPLODE;
+    auto extra = unbase64(input.at("extradata_base64"));
+    if (!extra.empty()) { decoder->extradata = static_cast<uint8_t*>(av_mallocz(extra.size() + AV_INPUT_BUFFER_PADDING_SIZE)); test(decoder->extradata); std::memcpy(decoder->extradata, extra.data(), extra.size()); decoder->extradata_size = extra.size(); }
+    test(avcodec_open2(decoder.get(), decoder->codec, nullptr) >= 0);
+    Json measured; size_t sequence = 0; int rejected = 0, frames = 0; std::optional<int64_t> first;
+    for (const auto& encoded : fixture.at("packets")) {
+        test(sequence < 256); auto packet = parse_packet(packet_base64(encoded), 1, generation, sequence++);
+        if (packet.flags & 1) {
+            if (!first) first = packet.pts;
+            if (packet.pts >= *first) {
+                uint64_t elapsed = static_cast<uint64_t>(packet.pts) - static_cast<uint64_t>(*first);
+                uint64_t deadline = (2ULL * tb.den + tb.num - 1) / tb.num; test(elapsed < deadline);
+            }
+        }
+        PacketPtr native(av_packet_alloc()); test(bool(native)); test(av_new_packet(native.get(), packet.payload.size()) >= 0);
+        std::memcpy(native->data, packet.payload.data(), packet.payload.size()); native->pts = packet.flags & 1 ? packet.pts : AV_NOPTS_VALUE; native->dts = packet.flags & 2 ? packet.dts : AV_NOPTS_VALUE;
+        auto before = observed_xll_recovery.load(); int result = avcodec_send_packet(decoder.get(), native.get());
+        if (result < 0) {
+            // Inspect subsequent metadata only after this exact known recovery
+            // marker. This is NOT a playback/trim/fallback policy or a PCM pass.
+            test(frames == 0 && rejected == 0 && observed_xll_recovery.load() > before);
+            ++rejected; continue;
+        }
+        for (;;) {
+            FramePtr frame(av_frame_alloc()); test(bool(frame)); result = avcodec_receive_frame(decoder.get(), frame.get());
+            if (result == AVERROR(EAGAIN) || result == AVERROR_EOF) break;
+            test(result >= 0 && !(frame->flags & AV_FRAME_FLAG_CORRUPT) && !frame->decode_error_flags);
+            Json channels = Json::array();
+            for (int ch = 0; ch < frame->ch_layout.nb_channels; ++ch) { char name[16]; test(av_channel_name(name, sizeof(name), av_channel_layout_channel_from_index(&frame->ch_layout, ch)) >= 0); channels.push_back(name); }
+            Json now{{"sample_rate", frame->sample_rate}, {"bits_per_sample", decoder->bits_per_raw_sample}, {"channel_order", channels}};
+            test(decoder->profile == AV_PROFILE_DTS_HD_MA || decoder->profile == AV_PROFILE_DTS_HD_MA_X || decoder->profile == AV_PROFILE_DTS_HD_MA_X_IMAX);
+            if (measured.empty()) measured = now; else test(measured == now);
+            ++frames;
+            if (frames == 8) return {{"status", "diagnostic_only"}, {"criterion_id", "external_audio.decoder_policy.v1"},
+                {"xll_recovery_packets_rejected", rejected}, {"full_hd_frames_inspected", frames}, {"format", measured},
+                {"leading_coverage_missing", rejected > 0}, {"source_acceptance", false}, {"physical_acceptance", false}};
+        }
+    }
+    throw std::runtime_error("no bounded full-HD metadata observation");
+}
+static int remote_validation_stdin(bool inspect = false, bool recovery_probe = false) {
     try {
         std::string text; char block[8192];
         while (std::cin.read(block, sizeof(block)) || std::cin.gcount()) {
             test(text.size() + std::cin.gcount() <= 64 * 1024 * 1024); text.append(block, std::cin.gcount());
         }
-        std::cout << (inspect ? inspect_source(Json::parse(text)) : validate_remote(Json::parse(text))).dump() << '\n'; return 0;
+        std::cout << (recovery_probe ? inspect_after_recovery(Json::parse(text)) : inspect ? inspect_source(Json::parse(text)) : validate_remote(Json::parse(text))).dump() << '\n'; return 0;
     } catch (const std::exception& error) {
-        Json failure{{"status", "failed"}, {"code", "output_validation_failed"}};
+        Json failure{{"status", "failed"}, {"code", "output_validation_failed"},
+            {"decoder_observation", {{"criterion_id", "external_audio.decoder_policy.v1"}, {"xll_recovery_requested", std::to_string(observed_xll_recovery.load())}}}};
         std::string text = error.what(), prefix = "test assertion failed at line ";
         if (text.starts_with(prefix) && text.size() < 64 && std::all_of(text.begin() + prefix.size(), text.end(), [](char c) {return c >= '0' && c <= '9';})) failure["check_line"] = std::stoi(text.substr(prefix.size()));
         std::cout << failure.dump() << '\n'; return 1;
@@ -361,7 +414,8 @@ static int remote_validation_stdin(bool inspect = false) {
 }
 int main(int argc, char** argv) {
     av_log_set_level(AV_LOG_QUIET);
-    if (argc == 2 && std::string(argv[1]) == "--inspect-source") return remote_validation_stdin(true);
+    if (argc == 2 && std::string(argv[1]) == "--inspect-after-recovery") { av_log_set_level(AV_LOG_VERBOSE); av_log_set_callback(policy_log); return remote_validation_stdin(false, true); }
+    if (argc == 2 && std::string(argv[1]) == "--inspect-source") { av_log_set_level(AV_LOG_VERBOSE); av_log_set_callback(policy_log); return remote_validation_stdin(true); }
     if (argc == 2 && std::string(argv[1]) == "--validate-remote") return remote_validation_stdin();
     try {
         test(argc == 2 || argc == 3); if (argc == 3) { export_dir = argv[2]; std::filesystem::create_directories(export_dir); } pure(argv[1]); CodecPipeline::selfcheck();

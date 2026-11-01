@@ -1,3 +1,12 @@
+# 0.1.3 — 2026-11-01 (host diagnostic snapshot)
+
+- Bug fix: preserve source format hints and sanitized decoder-failure evidence
+  when reference decoding fails before a service session starts.
+- Add bounded, metadata-only DTS-HD inspection after rejected XLL recovery,
+  explicitly retaining missing leading coverage and failed source acceptance.
+- Record the authorized ODROID 0.1.2 deployment and the observed DTS-HD MA
+  7.1/48 kHz/24-bit source startup limitation. Runtime codec policy is unchanged.
+
 # 0.1.2 — 2026-11-01 (development candidate)
 
 - Added explicit native side/back FLAC layout preservation, including DTS 5.1(side),
@@ -21,8 +30,8 @@
 # CinemaSeat Audio Decoder
 
 A standalone headless C++20 service that converts demuxed DTS/TrueHD/MLP packets
-into FLAC. Audio stays in RAM. Development candidate **0.1.2**. The baseline stack was 0.1.1; an isolated 0.1.2
-arm64 candidate has also been built and tested without replacing that stack.
+into FLAC. Audio stays in RAM. Development snapshot **0.1.3**. The authorized ODROID stack runs tested 0.1.2.
+This host-diagnostic snapshot has not been deployed to a device.
 
 **Status: working native service and host tests; partial acceptance only.**
 CinemaSeat production integration and the Diagnose route are not implemented.

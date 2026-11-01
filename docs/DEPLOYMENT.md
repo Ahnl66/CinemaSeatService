@@ -1,4 +1,4 @@
-# Deployment — development candidate 0.1.2
+# Deployment — development snapshot 0.1.3
 
 The service runs independently. CinemaSeat production integration and the Diagnose
 connection are not implemented or accepted. The host test client can use the
@@ -64,7 +64,7 @@ component checks on the ODROID. Record build errors and do not treat that result
 as sustained playback or physical acceptance.
 
 The root Compose file has `pull_policy: never`: Dockge uses the locally built
-`cinemaseat-audio-decoder:0.1.2` image. It does not try to pull an unpublished
+`cinemaseat-audio-decoder:0.1.3` image. It does not try to pull an unpublished
 image, and it does not need access to the private Git repository itself.
 
 ### 4. Deploy in Dockge
@@ -215,5 +215,8 @@ Component success never establishes audible or visible presentation.
 
 See [REMOTE_TESTS.md](REMOTE_TESTS.md) for the reusable RAM-only audio checks and
 [ODROID evidence](evidence/ODROID_2026-11-01.md) for actual target observations.
-Version 0.1.2 has been built and tested in an isolated ODROID candidate container;
-the existing Dockge stack was left at 0.1.1 during those tests. Updating an existing device is a separate deployment action.
+Version 0.1.2 was first tested in an isolated native arm64 container and then
+deployed to the existing Dockge stack with explicit user approval. Settings were
+preserved and eight public-endpoint PCM checks passed after the update. Version
+0.1.3 adds host diagnostics and has not been deployed. Building from current main
+uses the 0.1.3 image tag; updating an existing device is a separate action.

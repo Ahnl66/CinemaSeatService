@@ -102,10 +102,13 @@ def main():
             if export.returncode:
                 raise RuntimeError('source_fixture_failed')
             fixture = json.loads(export.stdout)
+            source = fixture['start']['input']
+            report['source_description'] = {key: source[key] for key in ['codec', 'sample_rate_hint', 'bits_per_sample_hint', 'channel_order_hint', 'time_base']}
+            report['source_description']['expected_source_profile'] = fixture.get('expected_source_profile')
             inspection = subprocess.run([str(args.validator), '--inspect-source'], input=export.stdout, capture_output=True, text=True, timeout=120)
+            report['source_inspection'] = json.loads(inspection.stdout)
             if inspection.returncode:
                 raise RuntimeError('source_reference_decode_failed')
-            report['source_inspection'] = json.loads(inspection.stdout)
             fixtures = [('authorized-source', fixture)]
         else:
             fixtures = [(path.stem, json.loads(path.read_text())) for path in sorted(args.fixture_dir.glob('*.json'))]

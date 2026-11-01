@@ -19,7 +19,7 @@ RUN python3 scripts/build_dependencies.py --scratch /work \
 
 FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 LABEL org.opencontainers.image.title="CinemaSeat Audio Decoder" \
-      org.opencontainers.image.version="0.1.2"
+      org.opencontainers.image.version="0.1.3"
 COPY --from=build /runtime /opt/csad
 ENV LD_LIBRARY_PATH=/opt/csad/lib
 USER 10001:10001

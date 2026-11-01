@@ -1,6 +1,6 @@
 # Implementation status
 
-Updated: 2026-11-01; local development candidate 0.1.2. **Partially implemented; full acceptance is not established.**
+Updated: 2026-11-01; host diagnostic snapshot 0.1.3; ODROID deployed 0.1.2. **Partially implemented; full acceptance is not established.**
 The standalone native service converts tested codec packets into FLAC. CinemaSeat
 external-audio integration is not implemented. No production route, settings or
 backup export has changed. This is a private development source repository.
@@ -12,7 +12,7 @@ backup export has changed. This is a private development source repository.
 | 0 — Baseline | Complete | [BASELINE.md](BASELINE.md): implementation HEAD f083bb1, initially clean index/worktree; current backup 5 / DB 7 and bridge contracts inspected. |
 | 1 — Protocol and codec core | Partially proven | Real DTS core/TrueHD/MLP roundtrips and pure protocol tests pass. DTS-HD MA, 7.1, layout coverage and additional failure fixtures are missing. The SVC-03 gate is not met. |
 | 2 — Transport and Docker | Independent service/host implementation prepared; not accepted | Beast service, settings, logging, lifecycle, concurrency and sanitizer checks pass on arm64 macOS. Dockerfile and root Dockge Compose file exist; an isolated native arm64 candidate has been built/tested; amd64 remains open. This does not bypass missing phase-1 evidence. |
-| 3 — Diagnose and hardware | Not started | Finish the phase-1 codec matrix. Reusable CS client/native bridge, preheader/mux integration, source-gated Diagnose test, report/schema/validator/UI/analysis guide are missing. The user reports an Armbian ODROID-N2+ at odroidn2.local and a physical Apple TV available; access and execution are not verified. |
+| 3 — Diagnose and hardware | Not started | Finish the phase-1 codec matrix. Reusable CS client/native bridge, preheader/mux integration, source-gated Diagnose test, report/schema/validator/UI/analysis guide are missing. The user reports an Armbian ODROID-N2+ at odroidn2.local and a physical Apple TV available; service access and short native component checks are verified; app integration is not. |
 | 4 — Standard production integration | Blocked by acceptance gate | Only after phase 3 passes. No settings/availability/fallback/HLS/export changes have been applied. |
 | 5 — Full acceptance | Open | Standalone host build proven; historical app verification recorded separately. New APP-01 through APP-05 and physical acceptance remain open. |
 | Independent repository | Private development snapshots | Initial service commit a2dcd2f, version 0.1.0. Version 0.1.1 adds Dockge deployment and English documentation. No app commit, nested repository, public release or published image. |
@@ -41,7 +41,7 @@ A passing host subset never makes an entire acceptance criterion pass.
 | Full local tvOS check | Historical baseline passed, exit 0: full --all --app entrypoint with Xcode, all host runners/native TSAN and Full build/metadata validation. No new integration exists. |
 | Standard build and codec exclusions | Historical unchanged app baseline passed with CinemaSeat - Standard, arm64 tvOS Simulator; codec exclusion check passed. |
 | Standalone build outside app folder | Passed on arm64 macOS with source/hash-pinned dependencies and no app Vendor dependency. |
-| Dockge Compose file | Root file and English instructions prepared. YAML/configuration inspected locally; Docker/Dockge execution on the ODROID is not yet performed. |
+| Dockge Compose file | Root file and English instructions prepared. YAML/configuration inspected locally; native 0.1.2 deployment on the ODROID is verified; amd64 and full acceptance remain open. |
 
 ## Three critical integration questions
 
@@ -75,14 +75,14 @@ which can prevent DTS-HD priming. There is no silent DTS-core fallback, downmix,
 AAC, resampling or disk spool, and no claim of complete DTS-HD support.
 
 Debug events contain wall time and queue high-water marks. Server CPU/RSS and
-thermal behavior still need external measurement. The running 0.1.1 arm64 container and short component tests are now observed on the ODROID. A long target benchmark and a deployment update of the existing stack are still unexecuted. Project licensing and public distribution remain open.
+thermal behavior still need external measurement. The running 0.1.1 arm64 container and short component tests are now observed on the ODROID. The explicitly approved update to 0.1.2 is complete; a long target benchmark is still unexecuted. Project licensing and public distribution remain open.
 
 ## ODROID follow-up
 
 See [ODROID_2026-11-01.md](evidence/ODROID_2026-11-01.md). One/two/four short-session
 PCM checks are component evidence, not HW-01/HW-02 acceptance. The local 0.1.2
 candidate fixes explicit side-layout support and strengthens host verification;
-it has been tested in an isolated native arm64 container without replacing the existing stack. The supplied source shows a 64-sample timing
+it was tested in an isolated native arm64 container, then deployed with explicit approval. The supplied source shows a 64-sample timing
 discrepancy against a 48-sample allowed tick at 116 ms. The strict rejection remains
 in place. No source rebias, gap fill, drop or timing-tolerance relaxation is applied.
 
@@ -91,3 +91,17 @@ sessions, plus 35-second credit starvation with two heartbeats and ~7.4 ms cance
 The temporary container is removed. Actual Matroska block anchors remain within
 ±16 samples while inferred lace timestamps reach an 80-sample difference. Diagnose
 must investigate that distinction before any external-route timing adaptation.
+
+## 7.1 source investigation and current deployment
+
+The ODROID now runs the explicitly approved 0.1.2 image at commit `31a2978`;
+settings were preserved and eight post-deployment PCM checks passed. The 0.1.3
+host diagnostic snapshot has not been deployed. No app functionality changed.
+
+The second authorized DTS-HD MA source provides 7.1/48 kHz/24-bit full-HD frames,
+but strict reference decoding rejects initial XLL recovery before a service
+session begins. A bounded metadata-only observation confirms the layout after
+that rejection and explicitly reports missing leading coverage and no source or
+physical acceptance. See [source evidence](evidence/DTSHD_7_1_2026-11-01.json).
+This does not meet SVC-03 or authorize a runtime recovery/trim policy. A real
+TrueHD 7.1 source, complete DTS-HD service pass and physical acceptance remain open.

@@ -68,6 +68,8 @@ Stable host criterion IDs:
 - `external_audio.host_pcm_equivalence.v1`: equal canonical signed 32-bit
   little-endian PCM hashes, valid sample count, explicit speaker order, rate,
   precision and absolute first/end PTS.
+- `external_audio.decoder_policy.v1`: fixed-marker XLL recovery observations,
+  bounded full-HD format inspection and explicit missing leading coverage.
 - `external_audio.host_source_timeline.v1`: independent reference format/PCM hash,
   original time base, aggregate timestamp deviation and bounded frame trace.
 
@@ -112,3 +114,27 @@ Host source inspection also records up to 64 demux-position groups, with input
 packet counts and original first/last PTS. `demux_groups_truncated` states missing
 coverage. These values are evidence of container grouping, not permission to
 retime packets or ignore known timestamps in production.
+
+## Rejected XLL startup: metadata only
+
+`core_tests --inspect-source` records a count when the pinned decoder requests
+XLL recovery. Only the exact fixed upstream marker is recognized; raw decoder
+logs are never formatted or retained. The regular checker preserves this sanitized
+failure and initial probe hints even when reference decoding stops before any
+service session. Probe hints can describe a core and must not be mistaken for the
+full-HD layout.
+
+For an explicitly authorized local DTS source, the existing RAM-only extractor
+may feed `core_tests --inspect-after-recovery` through a subprocess pipe. Never
+redirect the extractor's stdout to disk. This diagnostic rejects the first recovery
+packet and inspects subsequent noncorrupt full-HD frames solely for format
+metadata. It permits at most one such initial rejection, checks the full HD-MA
+profile and stable format, and stops at eight frames, 256 packets or two seconds
+of source time. Invocation/input buffers retain the normal 64 MiB bound.
+
+This is not a service playback policy. It reports `diagnostic_only`,
+`source_acceptance: false`, `physical_acceptance: false` and whether leading
+coverage is missing. It emits no PCM or compressed payloads. It does not prove
+complete lossless playback, repair timestamps, trim requested audio or permit
+lossy recovery. Any playback adaptation must first be justified and source-gated
+in the existing Diagnose app with its full report contract.

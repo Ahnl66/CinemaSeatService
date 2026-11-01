@@ -1,0 +1,89 @@
+{
+  "criterion_id": "external_audio.decoder_policy.v1",
+  "normal_check": {
+    "criterion_id": "external_audio.remote_codec.v1",
+    "status": "failed",
+    "sessions": 1,
+    "measurements": [],
+    "physical_acceptance": false,
+    "missing": [
+      "60-minute continuous session",
+      "client preheader/fMP4/AVPlayerItem",
+      "physical channel/lip-sync/HDR/DV review",
+      "source seeks and track switches",
+      "server CPU/RSS/temperature unless separately measured"
+    ],
+    "validator_sha256": "c0dd14d436341bd6b606e7394852064824915a65e29911a165b787ee397bdbf9",
+    "service": {
+      "protocol": 1,
+      "service_version": "0.1.2",
+      "build_id": "1fa9b2358dc7788f45d8f4f6da173cb92e717050fea78bf1dc989210c14ce462",
+      "ffmpeg_revision": "946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+    },
+    "source_description": {
+      "codec": "dts",
+      "sample_rate_hint": 48000,
+      "bits_per_sample_hint": 24,
+      "channel_order_hint": [
+        "FL",
+        "FR",
+        "FC",
+        "LFE",
+        "SL",
+        "SR"
+      ],
+      "time_base": {
+        "den": 1000,
+        "num": 1
+      },
+      "expected_source_profile": null
+    },
+    "source_inspection": {
+      "check_line": 175,
+      "code": "output_validation_failed",
+      "decoder_observation": {
+        "criterion_id": "external_audio.decoder_policy.v1",
+        "xll_recovery_requested": "1"
+      },
+      "status": "failed"
+    },
+    "error_kind": "RuntimeError",
+    "error_code": "source_reference_decode_failed"
+  },
+  "bounded_metadata_inspection": {
+    "criterion_id": "external_audio.decoder_policy.v1",
+    "format": {
+      "bits_per_sample": 24,
+      "channel_order": [
+        "FL",
+        "FR",
+        "FC",
+        "LFE",
+        "BL",
+        "BR",
+        "SL",
+        "SR"
+      ],
+      "sample_rate": 48000
+    },
+    "full_hd_frames_inspected": 8,
+    "leading_coverage_missing": true,
+    "physical_acceptance": false,
+    "source_acceptance": false,
+    "status": "diagnostic_only",
+    "xll_recovery_packets_rejected": 1
+  },
+  "deployment": {
+    "requested_version": "0.1.2",
+    "commit": "31a2978df3548bb296bb26f72ae324ad49c0b51a",
+    "image_id": "sha256:bd40bf86a8d97910daa8df272e11c6195798cf12599fa93a3478deb1a07adc68",
+    "previous_image_id": "sha256:123e56f5821571aebbfea0ae1a6fea602ae59f8f1aeca0671ffe012e565dcdd4",
+    "settings_preserved": true,
+    "status": "deployed",
+    "protocol": 1,
+    "service_build_id": "1fa9b2358dc7788f45d8f4f6da173cb92e717050fea78bf1dc989210c14ce462",
+    "available_sessions": 4
+  },
+  "metadata_validator_sha256": "d0071ccdd4f218ec2c7a39add95435144979b2db6c3e36a8e00b25bdd079a4b9",
+  "bounded_fixture_sha256": "9d738c42b8bde47fa6ba73304611a424587578351e9399c9aa8fe3ef9688bceb"
+}

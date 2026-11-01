@@ -1,4 +1,4 @@
-# Dependencies — development candidate 0.1.2
+# Dependencies — development candidate 0.1.3
 
 Exact source URLs, revisions and SHA-256 hashes are in `dependencies/manifest.json`.
 
