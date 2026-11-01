@@ -1,106 +1,118 @@
-# Startopdracht voor Sol gemiddeld — externe audiodecoder
+# Implementation handoff — external audio decoder
 
-Kopieer onderstaande opdracht naar een bouwchat met Sol op gemiddeld. Het maken
-van dit bestand start geen implementatie. De huidige technische documenten zijn
-verplicht te lezen context; voer geen ontbrekende productkeuzes op eigen gezag in.
+This is the English maintenance version of the original handoff for one Sol at
+medium reasoning effort. The service now lives in this independent repository;
+its initial implementation is partial. Read current status before continuing.
+Do not treat this document as authorization to repeat completed work or activate
+an unaccepted production route. Repository documentation must remain in English;
+chat communication follows the user's requested language.
 
----
+## Required context and order
 
-Je werkt in `/Users/arthur/Documents/Projects/CinemaPlexTV`. Communiceer in het
-Nederlands. Bouw de goedgekeurde externe audiodecoder volgens:
+For service work, read this repository's README, technical design, protocol v1
+and implementation status in full. For app integration, also read the current
+root AGENTS.md in the separate CinemaPlexTV app checkout, originally located at
+`/Users/arthur/Documents/Projects/CinemaPlexTV`.
 
-1. Actuele root-`AGENTS.md`.
-2. `services/cinemaseat-audio-decoder/README.md`.
-3. `services/cinemaseat-audio-decoder/docs/TECHNICAL_DESIGN.md`.
-4. `services/cinemaseat-audio-decoder/docs/PROTOCOL_V1.md`.
-5. `services/cinemaseat-audio-decoder/docs/IMPLEMENTATION_STATUS.md`.
+Follow technical-design phases 0 through 5 in order. Update status and evidence
+references after each phase. Use no subagents or delegation. Give short progress
+updates that describe findings and unresolved acceptance.
 
-Lees die documenten volledig vóór wijzigingen. Doe fase 0 t/m 5 uit het
-technisch ontwerp in volgorde. Werk per fase de status en bewijsverwijzingen bij.
-Gebruik geen subagents: de opdracht vraagt een uitvoerbaar ontwerp voor één Sol,
-geen delegatie. Geef korte inhoudelijke voortgangsupdates.
+## Approved scope
 
-De gebruiker heeft de volgende scope goedgekeurd:
+- A small headless Docker service, native amd64 and arm64, with multiple sessions.
+- Test targets: Synology DS923+ Ryzen R1600 and ODROID-N2+. One sustained session
+  must work on each; higher concurrency is determined by measurements.
+- Input is compressed audio from CS only: DTS/DTS-HD, TrueHD and MLP.
+- Output is channel-based FLAC only, without additional quality loss, downmix,
+  rate reduction, normalization or silent DTS-core fallback.
+- No source files/URLs, NAS shares, media library, UI or accounts.
+- Docker settings file; optional rotated file debug logging, off by default.
+  Audio stays in RAM; disk spooling is not an acceptable workaround.
+- Only tvOS Standard gets external-decoder enabled/address/port in general
+  Playback settings / Audio, using existing Save/Discard. Everything else is
+  automatic. Add no quality, codec or buffer options to CS.
+- Preserve Full and disabled behavior. No iPad feature, build or test work.
+- Only the new external FLAC integration is authorized. Existing ALAC choices
+  and blocked local decoders are out of scope. Codec exclusions remain mandatory.
 
-- Een kleine headless Docker-service, native amd64 en arm64, meerdere sessies.
-- Testhardware: Synology DS923+ Ryzen R1600 en ODROID-N2+. Op beide moet één
-  sessie duurzaam goed spelen; meer sessies zijn afhankelijk van de meetresultaten.
-- Invoer uitsluitend gecomprimeerde audio uit CS: DTS/DTS-HD, TrueHD, MLP.
-- Uitvoer uitsluitend FLAC, kanaalgebaseerd, zonder extra kwaliteitsverlies,
-  downmix, samplerateverlaging, normalisatie of stille DTS-corefallback.
-- Geen bronbestanden/-URL's, NAS-shares, mediabibliotheek, UI of accounts.
-- Settingsbestand in Docker; optionele geroteerde debuglogging naar bestand,
-  standaard uit. Audio uitsluitend RAM; geen disk-spool als oplossing.
-- Alleen tvOS Standard krijgt Externe audiodecoder enabled/adres/poort in de
-  algemene Spelersinstellingen/Audio, met bestaande Save/Discard. Overige werking
-  is automatisch. Geen extra kwaliteit-, codec- of bufferopties in CS.
-- Full/disabled gedrag blijft behouden. Geen iPad-feature, -build of -testopdracht.
-- Alleen de nieuwe externe FLAC-integratie is geautoriseerd; geen aanpassingen
-  aan bestaande ALAC-keuzes of lokale geblokkeerde decoders. Bestaande codec-
-  exclusiecheck blijft hard gelden.
+## Repository and baseline
 
-Alle servicecode, standalone tests, containers en protocolfixtures komen onder
-`services/cinemaseat-audio-decoder/`. Deze folder moet zelfstandig te bouwen zijn
-en wordt na ontwikkeling naar een nieuwe Git-repository verplaatst. Initialiseer
-nu geen nested repository/submodule en publiceer niets. Serviceversie begint als
-`0.1.0`, eigen VERSION/changelog, onafhankelijk van app en protocolmajor.
+Service code, standalone tests, containers and protocol fixtures belong in this
+repository and must build without the app checkout. Swift/Objective-C integration
+belongs in the app repository. Do not add a nested repository or submodule there.
+The initial service version was 0.1.0; service VERSION/changelog are independent
+of app version and protocol major. Version 0.1.1 adds Dockge deployment and English
+documentation without changing codec behavior.
 
-Er bestaat veel ander uncommitted/staged werk in deze repository, waaronder
-videoserver-, cloud-, layout- en iPad-wijzigingen. Bewaar dat exact. Revert/stage/
-commit geen andermans wijzigingen. De ontwerpbaseline is HEAD b69bcf0 plus de
-werkboom van 1 november 2026. Controleer actuele bronpaden en contracts; historische
-schemenamen/back-upversies uit oudere docs zijn geen reden om recente code terug
-te draaien. Het ontwerp gaat uit van back-upformaat 5→6 en DB-schema 7; als de
-actuele versie verder is, pas de nieuwe versie consequent aan met legacyreadtests.
+The original design used app HEAD b69bcf0 plus its 2026-11-01 worktree. Actual
+implementation started from f083bb1 with a clean worktree. Always inspect current
+paths/contracts, including existing video-server/cloud/layout/iPad work. Preserve
+all unrelated staged and unstaged changes. Historical scheme names and backup
+versions never justify reverting newer code. The planned backup migration is
+5 to 6 with DB schema 7; if current versions have advanced, update consistently
+and retain legacy-read tests.
 
-Maak eerst servicecore/protocol/containers en het Diagnose-bewijs. Nieuw
-media-experiment altijd source-gated in bestaande Diagnose met stabiele ID's,
-schema/validator/UI/analysehandleiding en bewijs vóór teardown. Geen aparte
-diagnostische tvOS-app, geen payloads/decoded media in rapporten. Componentpass
-is geen bewijs voor fysieke audio, lipsync of zichtbaar HDR/DV.
+## Implementation priorities
 
-De drie belangrijkste integratieproblemen moeten expliciet worden bewezen:
+Build and prove the service core, protocol and containers first, then Diagnose.
+Every new playback experiment must be source-gated in the existing Diagnose app,
+with stable IDs, schema/validator/UI/analysis-guide changes and evidence saved
+before teardown. Do not create a separate diagnostic tvOS app. Reports must not
+contain packets or decoded media. Component success is not physical audio,
+lip-sync or visible HDR/DV evidence.
 
-1. Vóór de fMP4-header voldoende audio primen om echte FLAC-STREAMINFO/layout te
-   krijgen, met begrensde lokale preheaderbuffer en geen dubbele demuxer.
-2. Decoder/encoder buffering en bidirectionele credits zonder packetrequest/
-   response-deadlock. Network receive/control/cancel blijft lopen bij volle queues.
-3. Eén absolute brontijdlijn, decodertrims eenmaal, CS-origin/bias eenmaal,
-   nieuwe generatie/socket bij seek en trackwissel. Geen drift verhullen.
+Explicitly prove these three integration problems:
 
-Pas na succesvolle Diagnose-/hardwarefase de productieroute activeren. Gebruik
-dezelfde herbruikbare transport/bridgecomponenten, geen tweede implementatie.
-Als die fase zonder fysieke toegang niet voltooid kan worden, voltooi al het
-onafhankelijke service-/hostwerk en rapporteer precies welke acceptatie ontbreekt.
-Zeg niet dat de hardware-eis bewezen is. Vraag alleen ontbrekende concrete
-toegang/testgegevens, niet opnieuw de reeds besloten functionele keuzes.
+1. Prime enough audio before the fMP4 header to obtain actual FLAC STREAMINFO and
+   layout, with a bounded local preheader buffer and no duplicate demuxer.
+2. Handle decoder/encoder buffering and independent bidirectional credits without
+   packet-request/response deadlock. Receive/control/cancel must run with full queues.
+3. Use one absolute source timeline, decoder trims once and CS origin/bias once;
+   create a new generation/socket for every seek and track switch. Never conceal drift.
 
-Verifieer eigen standaardsessie-/endpointlifetimes, cancellation op ieder await,
-late generation callbacks, out-of-range packets, resourcecleanup en foutpaden.
-Fallback mag geen stille AAC/downmix/andere audiotrack introduceren. Houd server-
-instellingen en Full buiten deze route intact. Nieuw standaard tvOS-bronbestand
-moet in de relevante Xcode-/hostharnesses staan; geen iPad-gate toevoegen.
+Activate production only after the Diagnose/hardware phase succeeds. Reuse the
+same transport/native bridge components. If physical access prevents completing
+a phase, finish independent service/host work and identify exact missing tests.
+Do not claim hardware acceptance. Ask only for concrete missing access/test data,
+not functional decisions that are already approved. The user reports an Armbian
+ODROID with Dockge at odroidn2.local and a physical Apple TV available; no target
+measurement has yet been performed. Never install Docker on the development Mac.
 
-Voor service: standalone `scripts/run_checks.py --all --scratch <absolute-path>`
-maken en uitvoeren; run Docker/native checks op beide architecturen. Voor app:
-de volledige bestaande entrypoint met geselecteerde volledige Xcode-toolchain:
+Verify Standard session/endpoint lifetimes, cancellation at every await, late
+generation callbacks, out-of-range packets, cleanup and failure paths. Fallback
+must not silently introduce AAC, downmix or another track. Preserve existing
+server settings and Full. Add every new Standard tvOS source to relevant Xcode
+and host harnesses; do not add an iPad gate.
+
+## Verification
+
+For the service, run the independent entrypoint on an absolute scratch path and
+perform native Docker checks on both architectures:
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer python3 Tests/run_checks.py --all --app --scratch <absolute-resolved-scratch-path>
+python3 scripts/run_checks.py --all --scratch /absolute/scratch/path
 ```
 
-Bouw en valideer daarnaast tvOS Standard expliciet met de actuele scheme en
-codec-exclusies. Rapporteer hosttests, containerchecks, lokale appverificatie,
-fysieke Apple TV-acceptatie en beide hardwarebenchmarks afzonderlijk. Maak
-overgeslagen verplichte checks niet groen en zwak geen bestaande regressie af.
+For app changes, use the existing full entrypoint with the full Xcode toolchain:
 
-Geen commit, push, install op apparaten, nieuwe remote repository of publicatie
-zonder afzonderlijke opdracht. Als een latere commit/push gevraagd wordt, volg
-het app-releasebeleid voor appwijzigingen en het onafhankelijke servicebeleid
-voor de service. GitHub Verify blijft uit; geen workflow dispatchen.
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer python3 Tests/run_checks.py --all --app --scratch /absolute/resolved/scratch/path
+```
 
-Eindig met de concrete werkende functies, tests, hardwaremetingen, exacte open
-punten en links naar implementatiestatus en deploymenthandleiding. Lever geen
-succesmelding voor een stub of een uitsluitend compilerende route.
+Also build tvOS Standard explicitly with the current scheme and validate codec
+exclusions. Report host tests, container checks, local app verification, physical
+Apple TV acceptance and both hardware benchmarks separately. Missing mandatory
+checks are not green, and regressions must not be weakened.
 
----
+## Publication boundaries and delivery
+
+The user authorized private source commits/pushes to Ahnl66/CinemaSeatService.
+App commits follow the separate app release policy; service commits follow their
+independent version/changelog policy. Do not infer authorization for installation
+on devices, a public release, image publication or a new remote repository.
+GitHub Verify stays disabled; do not dispatch workflows.
+
+Finish with concrete working behavior, tests, actual hardware measurements, exact
+open work and links to implementation status and deployment instructions. A stub
+or compiling-only route is not a successful delivery.

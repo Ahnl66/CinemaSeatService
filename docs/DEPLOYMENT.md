@@ -1,74 +1,166 @@
-# Deployment — development 0.1.0
+# Deployment — development 0.1.1
 
-Deze service draait zelfstandig. De CinemaSeat-productieroute en Diagnose-koppeling
-zijn nog niet gebouwd/geaccepteerd; alleen de beschreven hostclient kan momenteel
-de service gebruiken. Dit is geen afgeronde tvOS-feature of hardwaregoedkeuring.
+The service runs independently. CinemaSeat production integration and the Diagnose
+connection are not implemented or accepted. The host test client can use the
+service. Installing the stack does not yet enable external audio in CinemaSeat.
 
-## Andere server: native Dockerbuild
+## Dockge on the ODROID-N2+
 
-Testdoel is de ODROID-N2+ met Armbian op `odroidn2.local`. Docker wordt niet op de
-ontwikkel-Mac geïnstalleerd. Kloon de private servicerepository op de testserver:
+The intended test host is `odroidn2.local`, running Armbian and an existing Dockge
+installation. Docker is not installed on the development Mac. These instructions
+are for you to run on the ODROID; no device installation has been performed here.
 
-```sh
-git clone https://github.com/Ahnl66/CinemaSeatService.git
-cd CinemaSeatService
-git checkout <commit-sha>
-```
+### 1. Check the host and stacks directory
 
-Gebruik de commit-SHA van de te testen snapshot; dit maakt metingen reproduceerbaar.
-Regel toegang tot de private repository via de bestaande Git-authenticatie van de
-server, zonder tokens in Compose of settings te zetten. Controleer eerst `uname -m`
-en `docker compose version`; de arm64-test vereist een 64-bit OS en native Docker.
-Voer vervolgens vanuit de repositoryroot uit:
+Connect to the ODROID using your existing SSH account:
 
 ```sh
-cp config/settings.example.json docker/settings.json
-docker build -f docker/Dockerfile -t cinemaseat-audio-decoder:0.1.0 .
-docker compose -f docker/compose.example.yaml up -d
-docker compose -f docker/compose.example.yaml ps
-docker compose -f docker/compose.example.yaml exec audio-decoder /opt/csad/bin/cinemaseat-audio-decoder --healthcheck
+ssh <your-user>@odroidn2.local
+uname -m
+docker compose version
 ```
 
-Dezelfde Dockerfile is bedoeld voor native amd64 en arm64. Beide builds zijn hier
-**niet uitgevoerd**. Gebruik geen emulatie voor performanceacceptatie. Noteer
-`uname -m`, `docker version`, image-ID/digest, OS/kernel, RAM, containerlimieten,
-CPU, temperatuur en achtergrondbelasting bij elke meting. Een build op een andere
-server bewijst nog geen duurzame sessie op DS923+ of ODROID-N2+.
+The native arm64 test requires a 64-bit OS (`aarch64`), an accessible Docker daemon
+and Compose V2. Use the same Docker host/agent that Dockge manages.
 
-Compose publiceert alleen TCP 9078. De container gebruikt UID/GID 10001,
-read-only root, geen capabilities, geen mediavolumes en geen audiotempbestanden.
-Het settingsbestand wordt bij startup éénmaal ingelezen. Herstart na wijzigingen.
-Een ongeldige configuratie stopt startup. De basisimagedigest en dependencybronnen
-zijn gepind; apt buildtools zijn nog niet via een Debian-snapshot gepind.
+The commands below assume Dockge's default stacks directory, `/opt/stacks`. If
+`DOCKGE_STACKS_DIR` is different, substitute that directory. Dockge must have the
+same absolute stacks path mounted inside its container as on the host; this lets
+local build contexts and bind mounts resolve correctly. Use an account with write
+access to the stacks directory and permission to run Docker.
 
-Synology DS923+: gebruik Container Manager/Compose met bovenstaande folder als
-projectcontext. ODROID-N2+: gebruik een native 64-bit Linux/arm64 Dockeromgeving.
-Installeer niets op apparaten vanuit deze chat; deze stappen worden door de
-gebruiker uitgevoerd. Er wordt geen image gepubliceerd; de private bronrepository is op verzoek van de gebruiker vastgelegd.
+### 2. Clone and prepare the stack
 
-Gebruik alleen een vertrouwd LAN. `ws://` heeft geen authenticatie of encryptie;
-geen portforwarding of publieke internetpoort. Er zijn geen accounts, bron-URL's,
-NAS-mounts, library, UI of remotecontrolfunctie.
+The repository is private. Use the server's existing GitHub authentication; do
+not put a token in the Compose file, settings file or repository URL.
 
-## Configuratie en logging
+```sh
+cd /opt/stacks
+git clone https://github.com/Ahnl66/CinemaSeatService.git cinemaseat-service
+cd cinemaseat-service
+git rev-parse HEAD
+cp config/settings.example.json settings.json
+chmod 644 settings.json
+docker compose -f docker-compose.yml config
+```
 
-`config/settings.example.json` bevat alle defaults. Minimaal vereist is
-`{"version":1}`; onbekende keys/types/waarden worden geweigerd. Windows moeten
-minstens payload+64 bytes bevatten. De queuecap moet tevens één extra owned packet
-kunnen bevatten; de service valideert dit conservatiever dan het ontwerpminimum.
+Keep the printed commit SHA with test results. For a specific test snapshot,
+check it out before building: `git checkout <commit-sha>`.
 
-Debuglogging staat uit; `/logs` hoeft dan niet te bestaan. Met debug aan: maak op
-de server een logdirectory schrijfbaar door UID/GID 10001 en activeer alleen de
-optionele logmount in Compose. JSONL-events bevatten tijdelijke sessie-ID's,
-formaten, packet-/sampletellingen, queuehighwaters en walltime, geen audio of
-bronpaden. De logqueue is begrensd; rotatie gebruikt maximum_file_bytes en
-retained_files. Een schrijffout schakelt filelogging uit zonder audioteardown.
-CPU/RSS/temperatuur worden nog extern gemeten; walltime is geen CPU-meting.
+The default service port is 9078. The required `settings.json` stays local and is
+ignored by Git and the Docker build context. It contains no credentials. It is
+mounted read-only at `/config/settings.json`; a missing file fails instead of
+silently creating a directory. Do not copy an entire media folder into the stack.
 
-## Zelfstandige native build en checks
+### 3. Build once on the ODROID
 
-Vereist: Python 3.9+, C++20-compiler, make, CMake, curl en op Linux de gebruikelijke
-build-essential/ca-certificates/bzip2. Geen app-Vendor of bovenliggende repo nodig.
+```sh
+docker compose -f docker-compose.yml build
+```
+
+The first build downloads pinned upstream sources and compiles FFmpeg and the
+service natively. Allow it to finish before deploying. This build has not yet
+been tested on this ODROID, so record and share any build error without treating
+the instructions as hardware acceptance.
+
+The root Compose file has `pull_policy: never`: Dockge uses the locally built
+`cinemaseat-audio-decoder:0.1.1` image. It does not try to pull an unpublished
+image, and it does not need access to the private Git repository itself.
+
+### 4. Deploy in Dockge
+
+1. Open your existing Dockge interface for the ODROID.
+2. Open the top-right menu and select **Scan Stacks Folder**.
+3. Open the discovered `cinemaseat-service` stack.
+4. Deploy/start the stack and inspect its container state and terminal output.
+
+The repository-root `docker-compose.yml` is recognized by Dockge. You do not need
+to paste it into a separate stack, rename it or create a duplicate `compose.yaml`.
+The complete cloned repository must remain beside it because `build.context` is
+`.` and the Dockerfile lives at `docker/Dockerfile`.
+
+### 5. Check startup and reachability
+
+From the stack directory on the ODROID:
+
+```sh
+docker compose -f docker-compose.yml ps
+docker compose -f docker-compose.yml exec audio-decoder /opt/csad/bin/cinemaseat-audio-decoder --healthcheck
+```
+
+The health command should exit successfully. If `curl` is available, test from
+the ODROID or another LAN computer:
+
+```sh
+curl --fail http://odroidn2.local:9078/healthz
+curl --fail http://odroidn2.local:9078/v1/capabilities
+```
+
+Expected health body: `{"protocol":1,"status":"ok"}` (JSON key order may differ).
+There is no web page on port 9078. Healthy means startup/liveness passed; it does
+not prove DTS-HD quality, continuous playback, channel routing or lip sync.
+Default debug logging is off, so a healthy service can be quiet in container logs.
+
+### Updates
+
+For a checkout on `main`, stop the stack in Dockge, then run:
+
+```sh
+cd /opt/stacks/cinemaseat-service
+git pull --ff-only
+docker compose -f docker-compose.yml config
+docker compose -f docker-compose.yml build
+```
+
+Start/deploy it again in Dockge. For a pinned checkout, explicitly select the next
+commit instead of pulling. Keep your local settings. If Dockge has edited the
+tracked Compose file, review those changes before updating; do not overwrite them
+blindly. Rebuilding from Git, rather than Dockge's image-pull update, is required
+because no service image is published. Active sessions stop during an update.
+
+## Container configuration
+
+The same Dockerfile is intended for native amd64 and arm64. Neither architecture
+has been accepted on Linux yet. Do not use emulation for performance acceptance.
+Record architecture, Docker version, image ID/digest, OS/kernel, RAM, limits, CPU,
+temperature and background load for each benchmark. Another server's build does
+not establish a sustained session on a DS923+ or ODROID-N2+.
+
+Compose exposes TCP 9078 and uses UID/GID 10001, a read-only root filesystem,
+`cap_drop: ALL`, `no-new-privileges`, a 512 MiB memory limit, a PID limit and a
+15-second stop grace period. There are no media volumes or audio temporary files.
+The memory limit is a proposed deployment limit, not a measured capacity claim.
+
+Only use a trusted LAN. `ws://` has no authentication or encryption; do not expose
+this port to the internet or configure port forwarding. The service has no
+accounts, source URLs, NAS mounts, library, UI or remote-control feature.
+
+The base-image digest and dependency sources are pinned. Apt build tools are not
+yet pinned through a Debian snapshot; this is not a bit-reproducible image claim.
+The older `docker/compose.example.yaml` remains available for manual deployment
+with `docker/settings.json`; the root file is the recommended Dockge entrypoint.
+
+## Settings and logging
+
+`config/settings.example.json` contains all defaults. The minimum configuration
+is `{"version":1}`. Unknown keys, types and invalid values fail startup. Settings
+are read once; restart after changing them. Windows must contain at least
+payload+64 bytes. Queue capacity must also allow one extra owned packet; current
+validation is deliberately stricter than the design's minimum.
+
+Debug logging is off by default; `/logs` need not exist. To enable it, set
+`logging.debug_enabled` in the local settings file, create a local `logs` directory
+writable by UID/GID 10001, and enable the commented log mount in Compose. Restart
+the stack. Logs contain temporary session IDs, format properties, packet/sample
+counts, queue high-water marks and wall time, never audio or source paths. The
+log queue is bounded; `maximum_file_bytes` and `retained_files` control rotation.
+A write failure disables file logging without stopping audio. CPU/RSS/temperature
+still require external measurement; wall time is not CPU time.
+
+## Standalone native build and checks
+
+Requirements: Python 3.9+, a C++20 compiler, make, CMake and curl; on Linux, the
+usual build-essential/ca-certificates/bzip2 packages. No app Vendor tree is needed.
 
 ```sh
 python3 scripts/build_dependencies.py --scratch /tmp/csad-dependencies
@@ -77,37 +169,44 @@ cmake --build /tmp/csad-build -j2
 /tmp/csad-build/cinemaseat-audio-decoder --settings config/settings.example.json
 ```
 
-In een tweede terminal, voor de volledige controle:
+Run independent checks in a second terminal:
 
 ```sh
+python3 scripts/run_checks.py --host --scratch /tmp/csad-host-checks
 python3 scripts/run_checks.py --all --scratch /tmp/csad-checks
 ```
 
-`--host` voert de onafhankelijke native/protocol/codec/netwerktests uit.
-`--all` voert die ook uit en rapporteert ontbrekende releasebewijzen met een
-non-zero exit. Docker wordt nooit door de runner geïnstalleerd. Een groene
-`--host` is geen volledige acceptatie. Logs en `checks.json` blijven in scratch;
-gegenereerde audiopacketfixtures blijven uitsluitend testinput, geen rapportinhoud.
+`--host` runs native/protocol/codec/network tests. `--all` also checks available
+Docker tooling and reports missing mandatory evidence with a non-zero exit.
+Neither runner installs Docker. Host success is not full acceptance. Logs and
+`checks.json` stay in scratch. Generated audio-packet fixtures are test input only,
+not report contents. The Docker image intentionally contains no Python test runner.
 
-## Huidige beperkingen / acceptatie
+## Current limitations and acceptance
 
-- Hostbewezen: DTS core stereo, TrueHD stereo, MLP stereo en MLP 5.1(back),
-  exacte PCM-roundtrip, streaming STREAMINFO, 4096-sample FLAC plus exacte tail,
-  bronankers, ontbrekende PTS na anker, negatieve PTS en skip_samples.
-- Alleen vaste FLAC-layouts geaccepteerd; side-only 5.1 wordt momenteel expliciet
-  geweigerd. Float, custom/height layouts en midstream wijzigingen falen expliciet.
-- DTS gebruikt de gepinde fixed-point referentiedecode. XLL-recovery die lossy
-  coreaudio zou opleveren wordt hard geweigerd. Dit kan multichannel DTS-HD-start
-  blokkeren; geen bewezen DTS-HD MA-supportclaim voordat echte fixtures slagen.
-- Geen begrensde leading-fragmentrecovery bewezen; corrupte priming faalt
-  conservatief. TrueHD zonder major sync heeft bronpreroll van de toekomstige
-  CS-reader nodig. Geen willekeurige decode-errors overslaan.
-- Niet bewezen: native Linuximages op beide architecturen, DTS-HD MA/7.1,
-  fysieke audio/lipsync/HDR/DV, preheader→fMP4→AVPlayerItem, een uur realtime op
-  beide apparaten, seek/trackwissel en concurrentieschaal.
-- De CS-transport/native bridge, Diagnose-test/evidencecontract en productie-UI,
-  routepolicy en exportformaat 6 blijven open. Bestaande appwerking blijft intact.
+- Host-proven: DTS core stereo, TrueHD stereo, MLP stereo and MLP 5.1(back), exact
+  PCM roundtrip, streaming STREAMINFO, 4096-sample FLAC blocks and exact tail,
+  source anchors, missing PTS after anchoring, negative PTS and skip samples.
+- Only canonical FLAC layouts are accepted. Side-only 5.1, float, custom/height
+  layouts and midstream format changes fail explicitly.
+- DTS uses the pinned fixed-point reference decode. Lossy XLL recovery is rejected;
+  this can block multichannel DTS-HD startup. No DTS-HD MA support claim is made
+  until representative fixtures pass.
+- Bounded leading-fragment recovery is unproven. Corrupt priming fails
+  conservatively. TrueHD without a major sync needs preroll from the future CS
+  reader; arbitrary decode errors must not be ignored.
+- Still unproven: both native Linux images, DTS-HD MA/7.1, physical audio/lip sync/
+  HDR/DV, preheader-to-fMP4-to-AVPlayerItem, one-hour realtime on both devices,
+  seeks, track switches and concurrent-session capacity.
+- The CS transport/native bridge, Diagnose evidence contract and production UI,
+  route policy and backup format 6 remain open. Existing app behavior is unchanged.
 
-Meetprocedure en criteria: [TECHNICAL_DESIGN.md](TECHNICAL_DESIGN.md#10-test--en-acceptatiematrix).
-Alleen source-gated Diagnose mag de volgende nieuwe tvOS-media-experimenten doen.
-Geen componentpass vertalen naar hoorbare/zichtbare acceptatie.
+Procedure and criteria: [technical design](TECHNICAL_DESIGN.md#10-test-and-acceptance-matrix).
+New tvOS media experiments must remain source-gated in the existing Diagnose app.
+Component success never establishes audible or visible presentation.
+
+## Dockge references
+
+- [Official installation and existing-stack discovery](https://github.com/louislam/dockge#can-i-manage-existing-stacks)
+- [Official stacks-directory mount configuration](https://github.com/louislam/dockge/blob/master/compose.yaml)
+- [Accepted Compose filenames in Dockge](https://github.com/louislam/dockge/blob/master/common/util-common.ts)

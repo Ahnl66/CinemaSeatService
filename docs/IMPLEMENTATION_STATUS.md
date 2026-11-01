@@ -1,77 +1,81 @@
-# Implementatiestatus
+# Implementation status
 
-Bijgewerkt: 2026-11-01. **Gedeeltelijk geïmplementeerd; geen volledige acceptatie.**
-Een echte zelfstandige native service converteert geteste codecpackets naar FLAC.
-Dit is nog geen werkende externe-audiofeature in CinemaSeat. Geen productiepad,
-instellingen of configuratie-export aangepast. Private servicebron-snapshot in Ahnl66/CinemaSeatService; geen publieke release.
+Updated: 2026-11-01. **Partially implemented; full acceptance is not established.**
+The standalone native service converts tested codec packets into FLAC. CinemaSeat
+external-audio integration is not implemented. No production route, settings or
+backup export has changed. This is a private development source repository.
 
-## Fasen en stopcriteria
+## Phases and gates
 
-| Fase | Status | Bewijs / vervolg |
+| Phase | Status | Evidence / next work |
 | --- | --- | --- |
-| 0 — Implementatiebaseline | Gereed | [BASELINE.md](BASELINE.md): HEAD f083bb1, schone index/werkboom; actuele back-up 5 / DB 7 en brugcontracten geïnspecteerd. |
-| 1 — Protocol en codecservicecore | Gedeeltelijk bewezen | Echte DTS core/TrueHD/MLP-roundtrips en pure protocoltests slagen. DTS-HD MA, 7.1, layoutbreedte en aanvullende foutfixtures ontbreken. SVC-03-stopcriterium nog niet gehaald. |
-| 2 — Transport en Docker | Onafhankelijke service-/hostimplementatie voorbereid; niet geaccepteerd | Beast-service, settings, logging, lifecycle, concurrency en sanitizerchecks op arm64 macOS geslaagd. Dockerrecept aanwezig; beide native Linuximages niet gebouwd/getest. Dit doorloopt geen ontbrekend fase-1-bewijs. |
-| 3 — Diagnose / hardware | Niet gestart | Eerst fase-1-codecmatrix afronden. Herbruikbare CS-client/native bridge, preheader/mux, source-gated Diagnose-test, rapport/schema/validator/UI/analysehandleiding ontbreken. Daarna fysieke hardwaretesten; ODROID-N2+ met Armbian op odroidn2.local en een fysieke Apple TV zijn door de gebruiker beschikbaar gemeld. Uitvoering/toegang nog niet geverifieerd. |
-| 4 — Standard productie-integratie | Geblokkeerd door acceptatiegate | Pas na succesvolle fase 3. Geen settings/availability/fallback/HLS/exportwijzigingen toegepast. |
-| 5 — Volledige acceptatie | Open | Onafhankelijke hostbuild bewezen; volledige bestaande appcheck en expliciete Standard-check worden afzonderlijk vastgelegd. Nieuwe APP-01 t/m 05 en fysieke acceptatie ontbreken. |
-| Eigen repository | Private ontwikkelsnapshot 0.1.0 | Service los van de app in Ahnl66/CinemaSeatService. Geen nested Git/submodule, appcommit of publieke release. |
+| 0 — Baseline | Complete | [BASELINE.md](BASELINE.md): implementation HEAD f083bb1, initially clean index/worktree; current backup 5 / DB 7 and bridge contracts inspected. |
+| 1 — Protocol and codec core | Partially proven | Real DTS core/TrueHD/MLP roundtrips and pure protocol tests pass. DTS-HD MA, 7.1, layout coverage and additional failure fixtures are missing. The SVC-03 gate is not met. |
+| 2 — Transport and Docker | Independent service/host implementation prepared; not accepted | Beast service, settings, logging, lifecycle, concurrency and sanitizer checks pass on arm64 macOS. Dockerfile and root Dockge Compose file exist; neither native Linux image is tested. This does not bypass missing phase-1 evidence. |
+| 3 — Diagnose and hardware | Not started | Finish the phase-1 codec matrix. Reusable CS client/native bridge, preheader/mux integration, source-gated Diagnose test, report/schema/validator/UI/analysis guide are missing. The user reports an Armbian ODROID-N2+ at odroidn2.local and a physical Apple TV available; access and execution are not verified. |
+| 4 — Standard production integration | Blocked by acceptance gate | Only after phase 3 passes. No settings/availability/fallback/HLS/export changes have been applied. |
+| 5 — Full acceptance | Open | Standalone host build proven; historical app verification recorded separately. New APP-01 through APP-05 and physical acceptance remain open. |
+| Independent repository | Private development snapshots | Initial service commit a2dcd2f, version 0.1.0. Version 0.1.1 adds Dockge deployment and English documentation. No app commit, nested repository, public release or published image. |
 
-## Bewijsmatrix
+## Evidence matrix
 
-Resultaten en lokale logverwijzingen: [HOST_2026-11-01.md](evidence/HOST_2026-11-01.md).
-Geslaagde hostsubsets maken een volledige criteriumrij niet automatisch groen.
+Results and local log references: [host evidence](evidence/HOST_2026-11-01.md).
+A passing host subset never makes an entire acceptance criterion pass.
 
-| Vereiste | Status / exact bereik |
+| Requirement | Status / exact coverage |
 | --- | --- |
-| SVC-01 zelfstandige amd64/arm64-container | Niet uitgevoerd. Wel native arm64 macOS-build buiten appfolder en exacte runtime-codecregistry. |
-| SVC-02 protocol/interoperabiliteit/limieten | Hostsubset geslaagd: golden vector, negatieve/64-bit waarden, strikte JSON/base64, packetlimieten, sequences/generaties, capacity, controls en credits. Swift-interoperabiliteit en volledige adversariële matrix ontbreken. |
-| SVC-03 PCM-equivalentie incl. DTS-HD MA | Hostsubset geslaagd: DTS core stereo 48 kHz, TrueHD stereo 48 kHz, MLP stereo/5.1(back) 96 kHz. DTS-HD MA, 7.1, bredere rates/precisies niet uitgevoerd. |
-| SVC-04 timing/priming/EOF/foutpaden | Hostsubset geslaagd: 30s bronanker, negatieve PTS, ontbrekende PTS na anker, missing_timeline, discontinuïteit, decodertrims 5+7 samples, echte encodervertraging/EOF-tail. Geforceerde EAGAIN-/midstream-format-/leading-fragmentfixtures ontbreken. |
-| SVC-05 backpressure/cancel/multisession/cleanup | Hostsubset geslaagd: twee gelijktijdige sessies, volle outputqueue/geen nieuw credit, control/cancel, heartbeat tijdens korte pauze, starttimeout, shutdown, herstelde sessieslots. TSAN zonder melding. Langdurige pauze/halfopen/endurance/RSS-meting open. |
-| APP-01 settings/Full/disabled | Nieuwe feature niet uitgevoerd; app onaangepast. Baselinechecks apart. |
-| APP-02 routes/availability/fallback | Niet uitgevoerd; geen externe route geactiveerd. |
-| APP-03 preheader/FLAC/fMP4/playeritem | Niet uitgevoerd; STREAMINFO vóór serviceoutput is wel hostbewezen, maar geen bewijs voor native fMP4-header of AVPlayerItem. |
-| APP-04 lifecycle/seek/trackwissel | Niet uitgevoerd voor nieuwe client. Servicecancel is geen bewijs van clientgeneraties of CS-sessielifetimes. |
-| APP-05 configuratie-export/legacy import | Niet uitgevoerd; formaat blijft 5, schema blijft 7. |
-| HW-01 DS923+ één duurzame sessie | Niet uitgevoerd. |
-| HW-01 ODROID-N2+ één duurzame sessie | Niet uitgevoerd. |
-| HW-02 beide apparaten twee/vier sessies | Niet uitgevoerd. Twee hostsessies zijn geen hardwarebenchmark. |
-| ATV-01 hoorbare output/lipsync/HDR/DV | Niet uitgevoerd. |
-| Volledige lokale tvOS-check | Geslaagd, exit 0: volledige --all --app-entrypoint met Xcode, alle hostrunners/native TSAN en Full-appbuild/metadata. Bestaande appbasis; nieuwe integratie niet aanwezig. |
-| Standard-build en codec-exclusies | Geslaagd voor ongewijzigde appbasis, actuele scheme CinemaSeat - Standard, arm64 tvOS Simulator; codec-exclusiecheck geslaagd. |
-| Standalone build buiten appfolder | Geslaagd op arm64 macOS; dependencies source/hash-pinned zonder app-Vendor. |
+| SVC-01 standalone amd64/arm64 container | Not executed. Native arm64 macOS build outside the app folder and exact runtime codec registry pass. |
+| SVC-02 protocol/interoperability/limits | Host subset passes: golden vector, negative/64-bit values, strict JSON/base64, packet limits, sequences/generations, capacity, controls and credits. Swift interoperability and the complete adversarial matrix are missing. |
+| SVC-03 PCM equivalence including DTS-HD MA | Host subset passes: DTS core stereo 48 kHz, TrueHD stereo 48 kHz, MLP stereo/5.1(back) 96 kHz. DTS-HD MA, 7.1 and broader rate/precision coverage are untested. |
+| SVC-04 timing/priming/EOF/failures | Host subset passes: 30-second source anchor, negative PTS, missing PTS after anchoring, missing_timeline, discontinuity, decoder trims of 5+7 samples, actual encoder delay/EOF tail. Forced EAGAIN, midstream format and leading-fragment fixtures are missing. |
+| SVC-05 backpressure/cancel/multisession/cleanup | Host subset passes: two concurrent sessions, full output queue/no new credit, controls/cancel, heartbeat across a short pause, start timeout, shutdown and slot recovery. TSAN reports no race. Long pause/half-open/endurance/RSS tests remain open. |
+| APP-01 settings/Full/disabled | New feature not implemented; app unchanged. Baseline checks are separate. |
+| APP-02 routes/availability/fallback | Not executed; no external route activated. |
+| APP-03 preheader/FLAC/fMP4/player item | Not executed. Service STREAMINFO before output is host-proven, but this does not prove native fMP4 headers or AVPlayerItem acceptance. |
+| APP-04 lifecycle/seek/track switch | Not executed for the new client. Service cancellation does not establish client-generation or CS-session lifetime correctness. |
+| APP-05 configuration export/legacy import | Not executed. Backup remains format 5, DB schema remains 7. |
+| HW-01 DS923+ sustained single session | Not executed. |
+| HW-01 ODROID-N2+ sustained single session | Not executed. Dockge installation instructions are prepared, not hardware evidence. |
+| HW-02 both devices, two/four sessions | Not executed. Two host sessions are not a hardware benchmark. |
+| ATV-01 audible output/lip sync/HDR/DV | Not executed. |
+| Full local tvOS check | Historical baseline passed, exit 0: full --all --app entrypoint with Xcode, all host runners/native TSAN and Full build/metadata validation. No new integration exists. |
+| Standard build and codec exclusions | Historical unchanged app baseline passed with CinemaSeat - Standard, arm64 tvOS Simulator; codec exclusion check passed. |
+| Standalone build outside app folder | Passed on arm64 macOS with source/hash-pinned dependencies and no app Vendor dependency. |
+| Dockge Compose file | Root file and English instructions prepared. YAML/configuration inspected locally; Docker/Dockge execution on the ODROID is not yet performed. |
 
-## Drie cruciale integratievragen
+## Three critical integration questions
 
-1. Service levert echte 34-byte STREAMINFO vóór het eerste FLAC-packet; bewezen
-   met echte encoders. **CS-preheaderbuffer, één demuxer, replay zonder dubbels en
-   fMP4-header zijn nog niet geïmplementeerd of bewezen.**
-2. Serverread/control loopt onafhankelijk van codecworker/outputcredit; volle
-   outputqueue en cancel zijn hostgetest. **CS-ontvangst/native muxqueue en de
-   bidirectionele clientkant ontbreken nog.**
-3. Service voert absolute bronsamples met één anker en controleert drift; negatieve
-   tijden, trims en ontbrekende vervolgtimestamps zijn hostgetest. **CS-origin/bias,
-   nieuwe socket per seek/trackwissel en late clientcallbacks zijn niet bewezen.**
+1. The service supplies real 34-byte STREAMINFO before its first FLAC packet;
+   actual encoder tests prove this. **CS preheader buffering, a single demuxer,
+   exactly-once replay and fMP4 header setup are not implemented or proven.**
+2. Server read/control handling continues independently of codec/output credit;
+   full output queue and cancellation are host-tested. **The CS receive/native
+   mux queue and bidirectional client implementation are still missing.**
+3. The service uses absolute source samples with one anchor and checks drift;
+   negative times, trims and missing later timestamps are host-tested. **CS
+   origin/bias, a new socket per seek/track switch and late client callbacks
+   are unproven.**
 
-## Nog concrete toegang / materiaal nodig
+## Concrete access and material still needed
 
-- Testdoel: ODROID-N2+ met Armbian op `odroidn2.local`; fysieke Apple TV beschikbaar
-  volgens gebruiker. Dockerstatus, 64-bit OS/architectuur en toegangsmethode nog
-  verifiëren. Docker wordt niet op deze Mac geïnstalleerd.
-- DS923+ en ODROID-N2+ voor de voorgeschreven één-uurtests met CPU/RSS/temperatuur,
-  pauze, seeks en trackwissels; daarna twee/vier sessies.
-- Geschikte DTS-HD MA/7.1 en TrueHD-testbronnen, met toestemming en referentiedecode.
-  Geen commerciële media committen of opnemen in rapporten.
-- Fysieke Apple TV plus audio-/beeldopstelling en menselijke kanaal/lipsync/HDR/DV-
-  beoordeling na de Diagnose-implementatie. Geen apparaatinstallatie zonder opdracht.
+- Target: ODROID-N2+ with Armbian/Dockge at `odroidn2.local`; physical Apple TV
+  available according to the user. Confirm 64-bit OS, Docker status and access
+  method. Docker must not be installed on this development Mac.
+- DS923+ and ODROID-N2+ for one-hour tests with CPU/RSS/temperature, pause, seeks
+  and track switches; subsequently two/four sessions.
+- Suitable authorized DTS-HD MA/7.1 and TrueHD sources with reference decode.
+  Do not commit commercial media or include media payloads in reports.
+- Physical Apple TV/audio/display setup and human channel/lip-sync/HDR/DV review
+  after Diagnose integration. Device installation requires separate instructions.
 
-## Bekende implementatiegrenzen
+## Known implementation limits
 
-Canonical FLAC-speakerlayouts worden strikt gevalideerd; side-only 5.1 en float
-worden momenteel geweigerd. XLL lossy recovery wordt in de gepinde servicebuild
-hard afgewezen en kan DTS-HD-priming blokkeren. Geen stille corefallback, downmix,
-AAC, resampling of disk-spool. Geen claim van volledige DTS-HD-ondersteuning.
-Debugevents bevatten walltime/queuewatermarks; server CPU/RSS en thermiek moeten
-nog extern worden gemeten. Docker-runtimechecks en benchmarkscript zijn voorbereid
-maar niet op Linux/hardware uitgevoerd. Projectlicentie/distributie blijft open.
+Canonical FLAC speaker layouts are validated strictly; side-only 5.1 and float
+are currently rejected. The pinned service build rejects lossy XLL recovery,
+which can prevent DTS-HD priming. There is no silent DTS-core fallback, downmix,
+AAC, resampling or disk spool, and no claim of complete DTS-HD support.
+
+Debug events contain wall time and queue high-water marks. Server CPU/RSS and
+thermal behavior still need external measurement. Container-runtime checks and
+the component benchmark script are prepared but unexecuted on target Linux
+hardware. Project licensing and public distribution remain open.

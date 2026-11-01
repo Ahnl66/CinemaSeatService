@@ -3,7 +3,7 @@
 import json, subprocess, sys, time, uuid
 from pathlib import Path
 scratch = Path(sys.argv[1]).resolve()
-image = 'cinemaseat-audio-decoder:0.1.0'
+image = 'cinemaseat-audio-decoder:0.1.1'
 name = 'csad-check-' + uuid.uuid4().hex[:12]
 path = scratch / 'container-settings.json'
 path.write_text('{"version":1}')

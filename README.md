@@ -1,67 +1,77 @@
-# 0.1.0 — 2026-11-01 (development snapshot)
+# 0.1.1 — 2026-11-01 (development snapshot)
 
-- Added headless DTS/TrueHD/MLP-to-FLAC conversion with bounded sessions,
-  independent credits, cancellation, health checks and optional rotated logging.
-- Added standalone host tests and a Docker deployment recipe.
-- Native Docker images, DTS-HD MA, hardware benchmarks and CinemaSeat integration
-  remain unaccepted. This is a private source snapshot, not a validated release.
+- Added a root `docker-compose.yml` and installation instructions for Dockge on
+  the ODROID-N2+ with Armbian, using a local build and read-only settings.
+- Converted all repository documentation to English.
+- Docker images, DTS-HD MA, hardware benchmarks and CinemaSeat integration remain
+  unaccepted. This is a private source snapshot, not a validated release.
 
 # CinemaSeat Audio Decoder
 
-Zelfstandige headless C++20-service voor gedemuxte DTS/TrueHD/MLP-pakketten naar
-FLAC, uitsluitend audio in RAM. Ontwikkelversie **0.1.0**, vastgelegd als private ontwikkelsnapshot.
+A standalone headless C++20 service that converts demuxed DTS/TrueHD/MLP packets
+into FLAC. Audio stays in RAM. Development version **0.1.1**.
 
-**Status: werkende native service/hosttests, gedeeltelijk geaccepteerd.**
-Geen CinemaSeat-productie-integratie of Diagnose-route geactiveerd. Dockerbuilds
-op amd64/arm64, DTS-HD MA en fysieke hardwareacceptatie ontbreken nog.
+**Status: working native service and host tests; partial acceptance only.**
+CinemaSeat production integration and the Diagnose route are not implemented.
+Native amd64/arm64 Docker builds, DTS-HD MA and physical acceptance remain open.
 
-- [Implementatiestatus en bewijsmatrix](docs/IMPLEMENTATION_STATUS.md)
-- [Deployment op je andere server](docs/DEPLOYMENT.md)
-- [Hostbewijs](docs/evidence/HOST_2026-11-01.md)
-- [Baseline](docs/BASELINE.md)
-- [Technisch ontwerp en fasen](docs/TECHNICAL_DESIGN.md)
-- [Normatief protocol v1](docs/PROTOCOL_V1.md)
-- [Oorspronkelijke startopdracht](docs/SOL_HANDOFF.md)
-- [Eigen changelog](CHANGELOG.md) en [dependency notices](THIRD_PARTY_NOTICES.md)
+- [Install with Dockge on the ODROID](docs/DEPLOYMENT.md#dockge-on-the-odroid-n2)
+- [Root Compose file](docker-compose.yml)
+- [Implementation status and evidence matrix](docs/IMPLEMENTATION_STATUS.md)
+- [Host evidence](docs/evidence/HOST_2026-11-01.md)
+- [Implementation baseline](docs/BASELINE.md)
+- [Technical design and phases](docs/TECHNICAL_DESIGN.md)
+- [Normative protocol v1](docs/PROTOCOL_V1.md)
+- [Implementation handoff](docs/SOL_HANDOFF.md)
+- [Changelog](CHANGELOG.md) and [dependency notices](THIRD_PARTY_NOTICES.md)
+
+## Dockge quick start
+
+Run these commands on the ODROID, using its existing GitHub access. Replace
+`/opt/stacks` if Dockge uses a different stacks directory. Use your normal account
+with access to that directory and the Docker daemon.
+
+```sh
+cd /opt/stacks
+git clone https://github.com/Ahnl66/CinemaSeatService.git cinemaseat-service
+cd cinemaseat-service
+cp config/settings.example.json settings.json
+chmod 644 settings.json
+docker compose -f docker-compose.yml config
+docker compose -f docker-compose.yml build
+```
+
+In Dockge, choose **Scan Stacks Folder**, open `cinemaseat-service`, and deploy it.
+Dockge recognizes `docker-compose.yml`. The image is built locally; no published
+image or private Git credentials inside Dockge are required. `pull_policy: never`
+keeps deployment local, so the initial build above is required. See the full
+[deployment guide](docs/DEPLOYMENT.md) for health checks and updates.
+
+## Standalone checks
 
 ```sh
 python3 scripts/run_checks.py --host --scratch /tmp/csad-host-checks
 python3 scripts/run_checks.py --all --scratch /tmp/csad-all-checks
 ```
 
-`--all` faalt met incomplete bewijsstatus zolang verplichte checks ontbreken.
-De scripts installeren Docker nooit. Docker wordt op verzoek van de gebruiker
-niet op de ontwikkel-Mac geïnstalleerd.
+`--all` returns a non-zero status while required evidence is missing. The scripts
+never install Docker. Docker must not be installed on the development Mac.
 
-De service kent geen mediabestanden, bron-URL's, NAS-paden, credentials, video,
-accounts of bibliotheek. Alleen settings en optionele geroteerde metadata-debuglogs
-gebruiken disk; audio wordt niet gespould. Er is geen AAC/downmix/resamplingroute.
-Fixed-point DTS en integer FLAC-packing worden tegen referentie-PCM getest.
-Niet bewezen of niet exact representabele formaten falen expliciet.
+The service does not read source files, URLs, NAS paths, credentials, video or a
+media library. It has no accounts or UI. Only settings and optional rotated
+metadata logs use disk. Audio is never spooled. There is no AAC, downmix or
+resampling route. Fixed-point DTS and integer FLAC packing are compared against
+reference PCM; unsupported or unproven formats fail explicitly.
 
-## Projectgrens en versiebeleid
+## Repository and version policy
 
-Alle servicecode, containers, fixtures en zelfstandige tests staan in deze
-repositoryroot. De build haalt hash-gecontroleerde dependencies zelfstandig op en
-gebruikt de CinemaSeat-app of app-Vendor niet. App en service hebben onafhankelijke
-Git-historie en versienummering.
+Service code, containers, fixtures and standalone tests live in this repository.
+The build fetches hash-verified dependencies independently and does not use the
+CinemaSeat app or its Vendor directory. App and service have independent Git
+history and version numbers. Service SemVer, protocol major and app version are
+separate; the app version is not changed by a service-only commit.
 
-Service-SemVer, protocolmajor en appversie zijn onafhankelijk. Deze eerste service-
-snapshot begint op 0.1.0; de appversie is niet verhoogd. De repository is privé.
-Een publieke release, projectlicentie, imagepublicatie en apparaatinstallatie
-vragen een afzonderlijke opdracht. GitHub Actions zijn niet toegevoegd of gestart.
-
-## Klonen op de testserver
-
-```sh
-git clone https://github.com/Ahnl66/CinemaSeatService.git
-cd CinemaSeatService
-cp config/settings.example.json docker/settings.json
-docker compose -f docker/compose.example.yaml up -d --build
-```
-
-Voer dit uit op de server waar Docker al beschikbaar is. Gebruik voor herhaalbare
-metingen een specifieke commit via `git checkout <commit-sha>`. Bij een private
-repository moet Git-toegang op die server afzonderlijk zijn geregeld; zet geen
-tokens in Compose of in het settingsbestand. De volledige procedure en open
-acceptatiepunten staan in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
+This repository is private. Public releases, project licensing, published images
+and device installation require separate instructions. No GitHub Actions workflow
+is included or dispatched. Keep runtime settings, logs, build outputs and private
+media outside Git. All repository documentation is maintained in English.

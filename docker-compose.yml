@@ -1,0 +1,32 @@
+# Build once on the Docker host before deploying this stack in Dockge:
+# docker compose -f docker-compose.yml build
+services:
+  audio-decoder:
+    image: cinemaseat-audio-decoder:0.1.1
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "9078:9078"
+    volumes:
+      - type: bind
+        source: ./settings.json
+        target: /config/settings.json
+        read_only: true
+        bind:
+          create_host_path: false
+      # Optional: enable only after setting logging.debug_enabled=true and
+      # creating ./logs writable by UID/GID 10001. Audio is never stored here.
+      # - type: bind
+      #   source: ./logs
+      #   target: /logs
+      #   bind:
+      #     create_host_path: false
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    pids_limit: 96
+    stop_grace_period: 15s

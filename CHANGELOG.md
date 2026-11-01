@@ -1,3 +1,12 @@
+# 0.1.1 — development, 2026-11-01
+
+- Added a root Compose file for Dockge with local image builds, read-only settings
+  and explicit failure when the settings file is missing.
+- Added ODROID-N2+/Armbian installation, health-check and update instructions.
+- Converted all repository documentation to English.
+
+No codec or playback behavior changes. Hardware acceptance remains open.
+
 # 0.1.0 — development, 2026-11-01
 
 - Added a standalone headless DTS/TrueHD/MLP-to-FLAC service with audio in RAM,

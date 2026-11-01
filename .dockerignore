@@ -4,3 +4,6 @@ local
 __pycache__
 *.pyc
 tests
+settings.json
+logs
+.env

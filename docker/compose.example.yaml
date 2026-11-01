@@ -1,6 +1,6 @@
 services:
   audio-decoder:
-    image: cinemaseat-audio-decoder:0.1.0
+    image: cinemaseat-audio-decoder:0.1.1
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -13,7 +13,7 @@ services:
       # - ./logs:/logs
     read_only: true
     cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
+    security_opt: ["no-new-privileges:true"]
     mem_limit: 512m
     pids_limit: 96
     stop_grace_period: 15s

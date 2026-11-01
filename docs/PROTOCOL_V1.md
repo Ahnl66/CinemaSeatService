@@ -1,34 +1,38 @@
-# CinemaSeat Audio Decoder — wireprotocol v1
+# CinemaSeat Audio Decoder — wire protocol v1
 
-Status: normatief v1-contract, 2026-11-01. Native server gedeeltelijk hostbewezen;
-CS-client ontbreekt nog. Zie IMPLEMENTATION_STATUS.md; protocolmajor ongewijzigd.
-MUST/MOET zijn vereisten; afwijkingen vereisen expliciete protocolwijziging.
-Wirefixtures worden in beide repositories identiek gepubliceerd. Dit protocol
-bevat nooit bestandsnamen, bron-URL's, serverauthenticatie of videopakketten.
+Normative contract dated 2026-11-01. The native server is partially host-proven;
+the CS client is not implemented. See [implementation status](IMPLEMENTATION_STATUS.md).
+The protocol major is unchanged by the documentation translation. MUST and MUST
+NOT express requirements. Deviations require an explicit protocol change.
 
-## 1. Endpoints en WebSocket
+Publish identical wire fixtures in the service and client repositories. This
+protocol never carries filenames, source URLs, server authentication or video.
 
-- `GET /healthz`: 200 JSON `{"status":"ok","protocol":1}` zolang eventloop
-  reageert en startupconfig/codecselfcheck is geslaagd. Geen sessiedetails.
-- `GET /v1/capabilities`: 200 JSON met `protocol`, `service_version`, `build_id`,
-  `ffmpeg_revision`, `input_codecs:["dts","truehd","mlp"]`,
-  `output_codecs:["flac"]`, effectieve limieten en `available_sessions`.
-- `GET /v1/session`: RFC6455-upgrade met subprotocol `cs-audio.v1`.
-  Verkeerd subprotocol/versie → HTTP 400/426; capaciteit vol → HTTP 503 met
-  vaste foutcode `capacity`. Eén upgrade reserveert één sessieslot.
-- Geen redirects volgen, cookies, credentials, CORS-wildcards of algemene
-  webresources. Reject browser `Origin`-headers (native CS stuurt geen Origin).
-  Geen permessage-deflate; gecomprimeerde audio opnieuw comprimeren is onnodig.
-- IPv4 default, expliciet configureerbaar IPv6-listenadres. Eén gepubliceerde poort.
-- Maximaal 16 KiB HTTP-header, 64 KiB control message, 1 MiB audiopayload. Stel
-  tevens de WebSocket-messageparser in op `1 MiB + 64 bytes`; fragmentatie van
-  WebSocket-frames mag de messagegrens niet omzeilen.
-- Niet-bekende paden/methoden → 404/405, zonder frameworkstacktrace.
+## 1. Endpoints and WebSocket
 
-HTTP-antwoordbody maximaal 64 KiB. App controleert Content-Length én streamed
-bytes. Alleen JSON-objecten voor tekstberichten; UTF-8, geen duplicate keys,
-geen NaN/Infinity, maximaal nestingdiepte 8. Unknown optional keys mogen genegeerd;
-unknown message type of onbekend verplicht feature geeft `protocol_error`.
+- `GET /healthz`: HTTP 200 JSON `{"status":"ok","protocol":1}` while the event
+  loop responds and startup configuration/codec self-checks have passed. No
+  session details are exposed.
+- `GET /v1/capabilities`: HTTP 200 JSON containing `protocol`, `service_version`,
+  `build_id`, `ffmpeg_revision`, `input_codecs:["dts","truehd","mlp"]`,
+  `output_codecs:["flac"]`, effective limits and `available_sessions`.
+- `GET /v1/session`: RFC6455 upgrade with subprotocol `cs-audio.v1`. Wrong
+  subprotocol/version returns HTTP 400/426; exhausted capacity returns HTTP 503
+  with fixed code `capacity`. Each upgrade reserves one session slot.
+- Do not follow redirects or use cookies, credentials, wildcard CORS or general
+  web resources. Reject browser `Origin` headers; native CS sends none. Disable
+  permessage-deflate; compressed audio should not be recompressed by WebSocket.
+- IPv4 by default; an IPv6 listen address can be configured explicitly. Publish
+  one TCP port.
+- Maximum HTTP header: 16 KiB; control message: 64 KiB; audio payload: 1 MiB.
+  Set the WebSocket message parser to at most `1 MiB + 64 bytes`. Frame
+  fragmentation MUST NOT bypass the assembled-message limit.
+- Unknown paths/methods return 404/405 without a framework stack trace.
+
+HTTP response bodies are at most 64 KiB. The app checks both Content-Length and
+actual streamed bytes. Text messages MUST be UTF-8 JSON objects, with no duplicate
+keys, NaN or Infinity and at most eight nesting levels. Unknown optional keys may
+be ignored. An unknown message type or unknown required feature is `protocol_error`.
 
 ## 2. Session lifecycle
 
@@ -37,27 +41,27 @@ upgrade → WAIT_START → PRIMING → RUNNING → DRAINING → ENDED → CLOSED
                          └──────── error/cancel/disconnect ─────→ CLOSED
 ```
 
-Na upgrade stuurt service `hello`, daarna verwacht hij `start` binnen vijf
-seconden. Er is precies één start per verbinding, één inputtrack, één outputcodec
-en één sessiegeneratie. Heartbeat werkt in alle niet-gesloten toestanden.
+After upgrade the service sends `hello` and expects `start` within five seconds.
+There is exactly one start per connection, one input track, one output codec and
+one session generation. Heartbeat operates in every non-closed state.
 
-`hello`:
+`hello`, service to client:
 
 ```json
 {
   "type":"hello", "protocol":1,
-  "session_id":"random-uuid", "service_version":"0.1.0",
+  "session_id":"random-uuid", "service_version":"0.1.1",
   "limits":{"packet_payload_bytes":1048576,"control_message_bytes":65536},
   "input_limit_bytes":"4194304"
 }
 ```
 
-`session_id` is tijdelijk, voor technische correlatie; geen device identity.
-Alle unsigned 64-bit counters en signed 64-bit timestamps in JSON zijn **decimale
-strings**, om verlies via JSON-double te voorkomen. Overige begrensde kleine
-integers zijn gewone JSON-integers. Geen locale separators/leading plus/whitespace.
+`session_id` is temporary technical correlation, not a device identity. All
+unsigned 64-bit counters and signed 64-bit timestamps in JSON are **decimal
+strings**, preventing JSON-double precision loss. Other bounded small integers
+are JSON integers. No locale separators, leading plus sign or whitespace.
 
-`start`, client → service:
+`start`, client to service:
 
 ```json
 {
@@ -76,60 +80,59 @@ integers zijn gewone JSON-integers. Geen locale separators/leading plus/whitespa
 }
 ```
 
-Hints mogen null zijn; onbekend is niet stereo/48k. Een bekende channel order is
-een geordende lijst namen uit FFmpeg/FLAC-ondersteunde speakerposities; geen lokale
-bitmaskenum op de wire. Zie formatvalidatie verderop. Extradata maximaal 64 KiB
-gedecodeerd, met FFmpeg-padding toegewezen. Ratio num/den beide positief,
-maximaal 1 miljard. `generation` 1..INT64_MAX en door client uniek per nieuwe
-playbackgeneratie. `audible_from_us` is gewenste bronstart, geen timestampbias.
+Hints may be null; unknown does not imply stereo or 48 kHz. A known channel order
+is an ordered list of FFmpeg/FLAC-supported speaker names, not a local bitmask
+enum. See format validation below. Decoded extradata is at most 64 KiB and gets
+FFmpeg input padding. Time-base numerator/denominator are positive and at most
+one billion. `generation` is 1 through INT64_MAX and unique for each new client
+playback generation. `audible_from_us` is the desired source start, not a bias.
 
-Service valideert codec en startconfig, opent decoder en antwoordt `started`
-met generation. Daarna pas mag client binaire input sturen. Service kan nog geen
-FLAC-parameters beloven totdat de eerste echte frames gedecodeerd zijn.
+The service validates codec/start configuration, opens the decoder and replies
+`started` with the generation. Only then may the client send binary input. The
+service cannot promise FLAC parameters until actual frames are decoded.
 
-## 3. Binaire packetmessages
+## 3. Binary packet messages
 
-Eén binaire WebSocket-message = één header van 64 bytes + één volledige
-gedemuxte codecpacketpayload. Geen batch binnen een message in v1; afzonderlijke
-messages mogen zonder request/responsewacht direct na elkaar worden verzonden.
-Transport kan TCP-writes samenvoegen. Alle integers network byte order (big endian),
-signed values two's complement. Parse met expliciete loads, niet C struct casting.
+One binary WebSocket message contains one 64-byte header and one complete
+demuxed codec-packet payload. No batching inside a v1 message. Separate messages
+may be sent consecutively without waiting for a per-packet response; TCP may
+coalesce writes. All integers use network byte order (big endian); signed values
+use two's complement. Parse explicit loads, never cast a wire buffer to a C struct.
 
-| Offset | Bytes | Veld | Contract |
+| Offset | Bytes | Field | Contract |
 | --- | --- | --- | --- |
 | 0 | 4 | magic | ASCII `CSAD` |
 | 4 | 1 | version | 1 |
 | 5 | 1 | kind | 1=input, 2=output |
-| 6 | 2 | flags | bit0 PTS-valid, bit1 DTS-valid, bit2 key; overige bits nul |
-| 8 | 8 | generation | unsigned, moet gelijk zijn aan start |
-| 16 | 8 | sequence | unsigned, per richting vanaf 0, exact +1 |
-| 24 | 8 | pts | signed, in richting-timebase; 0 als flag uit |
-| 32 | 8 | dts | signed, idem |
-| 40 | 8 | duration | signed, >=0; input 0=onbekend, output exact samples >0 |
-| 48 | 4 | payload_bytes | unsigned, 1..effectieve payloadlimiet |
-| 52 | 4 | skip_start | unsigned; input decoder skip-samples count |
-| 56 | 4 | skip_end | unsigned; input discard-padding count |
-| 60 | 4 | reserved | nul |
+| 6 | 2 | flags | bit0 PTS-valid, bit1 DTS-valid, bit2 key; all other bits zero |
+| 8 | 8 | generation | Unsigned; equal to the start generation |
+| 16 | 8 | sequence | Unsigned; starts at 0 independently in each direction, increases exactly by 1 |
+| 24 | 8 | pts | Signed, in the direction's time base; zero if flag is off |
+| 32 | 8 | dts | Signed; same rules as pts |
+| 40 | 8 | duration | Signed, >=0; input zero means unknown, output is an exact valid sample count >0 |
+| 48 | 4 | payload_bytes | Unsigned, 1 through the effective payload limit |
+| 52 | 4 | skip_start | Unsigned input decoder skip-sample count |
+| 56 | 4 | skip_end | Unsigned input discard-padding count |
+| 60 | 4 | reserved | Zero |
 
-Message length MOET exact 64+payload_bytes zijn. Reject lengte-/sequencefouten
-vóór allocatie/decode. Invoer staat geen AVPacket flag CORRUPT/DISCARD toe; de
-client moet dat expliciet als onbruikbare input afhandelen. Keyflag is informatief.
-Packetpayload kopiëren/refcounten met `AV_INPUT_BUFFER_PADDING_SIZE` nulpadding.
+Message length MUST equal `64 + payload_bytes`. Reject length/sequence errors
+before allocation/decode. Input MUST NOT contain AVPacket CORRUPT/DISCARD flags;
+the client handles them explicitly as unusable input. The key flag is informative.
+Copy/reference packet payloads with `AV_INPUT_BUFFER_PADDING_SIZE` zero padding.
 
-Inputside-data allowlist: `AV_PKT_DATA_SKIP_SAMPLES` wordt als skip_start/end
-vervoerd, redenen worden in v1 op nul gezet. Reconstructie naar FFmpeg gebeurt
-uitsluitend indien niet nul. Gedocumenteerde FFmpeg-trimming wordt eenmaal
-toegepast. `NEW_EXTRADATA`, `PARAM_CHANGE` of andere decode-beïnvloedende side
-data tijdens streaming → `format_changed`/`unsupported_side_data`. Encapsuleer
-geen willekeurige AVPacket-side-data-structs of enums in het netwerkprotocol.
-Irrelevante container-/presentatieside-data blijft lokaal in CS.
+Input side-data allowlist: transport `AV_PKT_DATA_SKIP_SAMPLES` as skip_start/end,
+with v1 reason bytes set to zero. Reconstruct FFmpeg side data only when either
+count is nonzero. Apply documented FFmpeg trimming exactly once. Streaming
+`NEW_EXTRADATA`, `PARAM_CHANGE` or other decode-affecting side data results in
+`format_changed`/`unsupported_side_data`. Do not transport arbitrary AVPacket
+side-data structs or enums. Irrelevant container/presentation side data stays in CS.
 
-Output: FLAC codecframes, geen FLAC-bestand of container. PTS en DTS zijn beide
-verplicht en gelijk, duration is geldig sampleaantal. skip_start/end altijd nul:
-output bevat reeds geldige samples. Encoderpadding mag niet als extra geldige
-audio worden uitgegeven. FIFO-tail exact encoderen of expliciet falen.
+Output consists of FLAC codec frames, not a FLAC file or container. Both PTS and
+DTS are mandatory and equal. Duration counts valid samples. skip_start/end are
+always zero because output is already trimmed. Encoder padding MUST NOT be
+reported as extra valid audio. Encode the FIFO tail exactly or fail explicitly.
 
-Golden vector minimale inputheader:
+Golden vector for a minimal input header:
 
 ```text
 magic CSAD, version 1, kind 1, flags 0003
@@ -137,12 +140,14 @@ generation 1, sequence 0, pts -1, dts -1, duration 1024
 payload_bytes 3, skip_start 0, skip_end 0, reserved 0, payload 01 02 03
 ```
 
-Maak bij implementatie de exacte 67-byte hexfixture en deel deze met Swift/C++.
-Negatieve tijden mogen niet per ongeluk UINT64 of JSON-double worden.
+The exact 67-byte hex fixture is
+[`tests/fixtures/input-negative-pts.hex`](../tests/fixtures/input-negative-pts.hex).
+Share it with Swift/C++ clients. Negative times must not become UINT64 or
+JSON-double values accidentally.
 
-## 4. Outputformat en absolute tijdlijn
+## 4. Output format and absolute timeline
 
-Service stuurt precies één `output_format` vóór het eerste outputpacket:
+The service sends exactly one `output_format` before its first output packet:
 
 ```json
 {
@@ -155,103 +160,105 @@ Service stuurt precies één `output_format` vóór het eerste outputpacket:
 }
 ```
 
-Wirecodec v1 definieert extradata als de FFmpeg FLAC-codecparameters: een raw
-34-byte STREAMINFO-body, zonder `fLaC` marker of 4-byte metadata-blockheader.
-Normaliseer/valideer op de servicegrens; kopieer geen backend-afhankelijke header
-blind. Sample rate, channels en significant bits in STREAMINFO moeten overeenkomen
-met de JSONvelden. Total samples en MD5 mogen streaming-onbekend zijn. De client
-maakt hiermee AVCodecParameters voor de bestaande fMP4-muxer.
+Wire codec v1 defines extradata as FFmpeg FLAC codec parameters: a raw **34-byte
+STREAMINFO body**, without a `fLaC` marker or four-byte metadata-block header.
+Normalize/validate this at the service boundary rather than copying a
+backend-specific header blindly. STREAMINFO sample rate, channel count and
+significant bits MUST agree with JSON. Total samples and MD5 may be unknown for
+streaming. The client uses these parameters to create AVCodecParameters for its
+existing fMP4 muxer.
 
-Channel order wordt uit de werkelijke decoderlayout naar de vaste FLAC-order
-gemapt en expliciet vermeld. Alleen representabele layouts toestaan; count-only
-is onvoldoende. Een deterministische kanaalpermutatie is toegestaan en wordt
-door channelimpulsfixtures bewezen; nooit een mixmatrix of stereodefault.
+Map the actual decoder layout to FLAC's fixed channel order and report it
+explicitly. Only representable layouts are allowed; channel count alone is not
+enough. A deterministic permutation is allowed if channel-impulse fixtures prove
+it. Never use a mix matrix or default to stereo.
 
-Tijdcontract:
+Timeline contract:
 
-- Input pts/dts in oorspronkelijke streamtimebase, inclusief negatieve tijden.
-- Gebruik decoded `AVFrame.pts`/best-effort timestamp en geldige samplecounts om
-  eerste geldige sample aan bronmedia te koppelen. Configureer pkt_timebase.
-- Output `pts = av_rescale_q(first_valid_source_timestamp, input_tb, {1,rate})`
-  en daarna exact +aantal geldige samples; referentie blijft absolute brontijd.
-- Afronding alleen bij het eerste anker, niet per inputpacket; anders ontstaat drift.
-- Ontbrekende PTS mag na bewezen anker via samples worden doorgeteld. Zonder
-  enig betrouwbaar eerste anker vóór de formatdeadline: `missing_timeline`.
-- Bij nieuwe betrouwbare timestamp vergelijk je verwachte volgende sampletijd;
-  verschil >max(2 samples, één inputtijdtick omgerekend naar samples) is een
-  discontinuïteit en geeft `timeline_discontinuity`. Geen stille gapfill of drops.
-- Frames vóór `audible_from_us` mogen als getimestampte preroll worden uitgevoerd;
-  de service knipt die niet op packetgrenzen weg. CS bepaalt de zichtbare start.
-- Bestaande source-origin, video-timestampbias en AVPlayer-seek worden uitsluitend
-  in CS toegepast, exact eenmaal. Een FLAC-PTS mag niet nogmaals vanaf nul beginnen
-  als de video al op een absolute seekpositie staat.
-- `initial_padding`/skip_sample-effecten moeten via fixtures aantonen waar het
-  eerste geldige anker ligt; geen heuristische constante delay toevoegen.
+- Input pts/dts use the original stream time base, including negative times.
+- Use decoded `AVFrame.pts`/best-effort timestamp and valid sample counts to anchor
+  the first valid sample to source media. Configure pkt_timebase.
+- Output `pts = av_rescale_q(first_valid_source_timestamp, input_tb, {1,rate})`,
+  then advance by exactly the number of valid samples. Keep absolute source time.
+- Round only at the first anchor, not once per input packet; otherwise drift accumulates.
+- After a proven anchor, missing PTS may be reconstructed by counting samples.
+  Without a reliable first anchor before the format deadline, fail `missing_timeline`.
+- For each new reliable timestamp, compare the expected next sample time. A
+  difference greater than `max(2 samples, one input tick rescaled to samples)` is
+  `timeline_discontinuity`. No silent gap filling or drops.
+- Frames before `audible_from_us` may be output as timestamped preroll. The
+  service does not cut them off at packet boundaries; CS controls visible start.
+- Existing source-origin, video timestamp bias and AVPlayer seek are applied
+  only in CS, exactly once. FLAC PTS must not restart at zero when video already
+  uses an absolute seek position.
+- Fixtures must establish how `initial_padding`/skip-sample effects locate the
+  first valid anchor. Do not add a heuristic constant delay.
 
-Indien backend geen betrouwbare sampletijdlijn kan bewijzen, faalt de variant.
-Verlaag de check niet om een bron toch 'werkend' te noemen. Audio die wel decodeert
-maar verkeerd getimed is, voldoet niet aan het contract.
+If a backend cannot establish a reliable sample timeline, the variant fails.
+Do not weaken the check to label a source playable. Decoding with incorrect
+timing does not satisfy this contract.
 
-## 5. Creditflow en begrensde buffering
+## 5. Credit flow and bounded buffering
 
-Beide richtingen hebben een onafhankelijk cumulatief bytesbudget. Een verzonden
-binary message kost exact header+payload; JSON/control/ping telt niet mee.
+Each direction has an independent cumulative byte budget. A sent binary message
+costs exactly header+payload bytes; JSON/control/ping messages do not consume it.
 
-- Service adverteert inputlimiet in hello; client outputlimiet in start.
-- Producer houdt `sent_bytes` bij vanaf nul. Hij mag een binary message pas sturen
-  wanneer `sent_bytes + message_size <= advertised_limit_bytes` zonder overflow.
-- Consumer houdt werkelijk geconsumeerde bytes bij en adverteert nieuw absoluut
-  plafond `consumed_bytes + window_bytes` via `credit`.
-- Voor input betekent consumed: packet heeft codecworkerownership bereikt en de
-  netwerkqueuebuffer is vrij; als worker het nog bewaart telt dat in codecqueuecap.
-- Voor output betekent consumed: CS heeft een owned packet toegelaten tot de
-  begrensde native muxqueue; als die vol is mag geen nieuw credit worden gegeven.
-- Monotone `credit`-limieten; een kleiner plafond is protocol_error. Counters
-  overflow → expliciete sessiefout, nooit wraparound.
+- The service advertises its input limit in hello; the client advertises its
+  output limit in start.
+- A producer starts `sent_bytes` at zero. It may send only if
+  `sent_bytes + message_size <= advertised_limit_bytes`, with overflow checks.
+- A consumer tracks actually consumed bytes and advertises the new absolute
+  ceiling `consumed_bytes + window_bytes` through `credit`.
+- Input is consumed when the codec worker owns the packet and the network queue
+  buffer is free. If the worker retains it, count it against the codec queue cap.
+- Output is consumed when CS admits an owned packet into its bounded native mux
+  queue. If that queue is full, no new credit may be granted.
+- Credit limits are monotonic. A smaller limit is `protocol_error`. Counter
+  overflow causes an explicit session error, never wrapping.
 
 ```json
 {"type":"credit","direction":"input","limit_bytes":"8388608"}
 ```
 
-`direction` is de richting die deze ontvanger mag produceren: service verleent
-inputcredit, client outputcredit. Herhaal bij vrijgeven van circa kwart window,
-of na 100 ms bij kleinere hoeveelheden. Creditwijzigingen worden samengevoegd,
-niet onbeperkt in controlqueues gestapeld. Output/in-flight buffers tellen mee in
-queuecaps; geen verborgen queue in URLSession-sendtasks.
+`direction` names the direction the receiver may produce: the service grants
+input credit and the client grants output credit. Update after releasing roughly
+one quarter of the window, or after 100 ms for smaller releases. Coalesce credit
+updates rather than growing control queues indefinitely. Count output/in-flight
+buffers against queue caps; URLSession send tasks must not hide another queue.
 
-Stuur- en ontvangloops werken onafhankelijk. Producer kan wachten terwijl
-consumer outputs verwerkt, errors ontvangt en cancel uitvoert. Initial format
-en controlverkeer wachten nooit op audiocredit. De codecworker mag op outputruimte
-wachten, maar de socketread/controlhandler niet. Na start kan de service frames
-decoderen vóór outputcredit gebruikt wordt; encoderoutput blijft begrensd.
+Send and receive loops operate independently. A producer may wait while the
+consumer handles output, errors and cancellation. Initial format/control traffic
+never waits for audio credit. The codec worker may wait for output capacity;
+socket read/control handling MUST NOT. Frames may be decoded after start before
+output credit is spent, but encoder output remains bounded.
 
-Pause: CS stopt inputproductie bij zijn playbackbufferbudget. Geen extra protocol-
-pause nodig. Heartbeats blijven lopen, queues groeien niet. Een gezonde gepauzeerde
-verbinding wordt niet na een data-idle-timeout gesloten. Bufferstarvation zonder
-progress wordt alleen actief gemeten wanneer er werk én credit beschikbaar is.
+Pause: CS stops producing input at its playback-buffer budget. No protocol pause
+message is needed. Heartbeats continue and queues do not grow. Do not close a
+healthy paused connection for data idleness. Measure starvation without progress
+only when both work and credit are available.
 
-## 6. EOF, cancel, fouten en heartbeat
+## 6. EOF, cancellation, errors and heartbeat
 
-Client stuurt `end_input` pas nadat alle inputmessages geordend verzonden zijn:
+The client sends `end_input` only after all input messages have been sent in order:
 
 ```json
 {"type":"end_input","generation":"1","input_packets":"1250"}
 ```
 
-`input_packets` moet gelijk zijn aan ontvangen packetcount. Geen nieuwe input
-hierna. Service draint en stuurt na alle outputs `end_output` met input/output-
-packetcount, geldig totalsamplecount, first_pts en end_pts_exclusive. `end_output`
-mag outputmessages niet inhalen. Counters dienen integriteitscontrole, geen
-codec-kwaliteitbewijs. Client valideert totaalsamples/contiguïteit, sluit met 1000.
-Drain-timeout loopt alleen voor codecwerk met outputcredit; heartbeat bewaakt een
-weggevallen consumer. Geen fileheaderfixup of audiotempbestand.
+`input_packets` MUST match the received count. No more input follows. The service
+drains and, after all output packets, sends `end_output` with input/output packet
+counts, valid total sample count, first_pts and end_pts_exclusive. It must not
+overtake output. Counters establish integrity, not codec quality. The client
+validates total samples/contiguity and closes with code 1000. A drain timeout
+runs only for codec work with output credit; heartbeat detects a missing consumer.
+No file-header fixup or audio temporary file is used.
 
-Client kan op elk moment `{"type":"cancel","generation":"1"}` sturen of de
-socket sluiten. Annulering discardt buffers, geen EOF-drain. Service antwoordt
-indien mogelijk `cancelled` en sluit 1000. Seek/trackwissel maakt een nieuwe socket;
-late callbacks van de oude generatie hebben geen effect op nieuwe playback.
+The client may send `{"type":"cancel","generation":"1"}` or close the socket
+at any time. Cancellation discards buffers without EOF draining. If possible the
+service replies `cancelled` and closes with 1000. Seek/track switch creates a new
+socket. Late callbacks from an old generation never affect new playback.
 
-Errorobject:
+Error object:
 
 ```json
 {
@@ -260,38 +267,40 @@ Errorobject:
 }
 ```
 
-Vaste codes: `protocol_error`, `unsupported_version`, `unsupported_codec`,
+Fixed service codes: `protocol_error`, `unsupported_version`, `unsupported_codec`,
 `unsupported_format`, `unsupported_side_data`, `format_changed`, `invalid_packet`,
 `decode_failed`, `encode_failed`, `missing_timeline`, `timeline_discontinuity`,
 `limit_exceeded`, `timeout`, `server_shutdown`, `internal_error`.
-Clientlokale codes: `unreachable`, `capacity`, `format_probe_limit`,
-`cancelled`, `output_validation_failed`.
-Retryable is alleen adviserend; CS-routepolicy bepaalt één toegestane fallback,
-geen autonome service-retries. Public message is een vaste vertaalbare boodschap,
-geen FFmpeg raw error, inputdump, lokale pathname of stacktrace.
+Client-local codes: `unreachable`, `capacity`, `format_probe_limit`, `cancelled`,
+`output_validation_failed`.
 
-Closecodes: protocolfout 1002, payload te groot 1009, normale EOF/cancel 1000,
-interne fout 1011. Eerst error sturen indien de transportstate dat veilig toelaat,
-daarna close. Bij onbruikbare transport direct teardown. Geen reconnect in
-dezelfde sessie. Client stelt eigen bounded handshake/send/receive-cancellation in.
+Retryable is advisory only. CS route policy determines one permitted fallback;
+there are no autonomous service retries. A public message is fixed and
+translatable, not a raw FFmpeg error, input dump, local path or stack trace.
 
-Service verstuurt WebSocket ping elke 15 s met pongdeadline 10 s. Gebruik de
-RFC6455-faciliteiten van Beast/URLSession, geen zelfbedachte audioheartbeats.
-Een uitblijvende pong sluit ook een pauzesessie. Healthmonitoring opent geen
-conversiesessie en neemt geen maxsessieslot in.
+Close codes: protocol error 1002, oversized payload 1009, normal EOF/cancel 1000,
+internal error 1011. Send an error before closing if transport state allows it;
+unusable transport tears down directly. Do not reconnect within a session.
+The client bounds handshake/send/receive waits and their cancellation.
 
-## 7. Verplichte interopfixtures
+The service sends a WebSocket ping every 15 seconds with a 10-second pong deadline.
+Use Beast/URLSession RFC6455 facilities, not custom audio heartbeat messages.
+A missing pong also closes a paused session. Health monitoring opens no conversion
+session and consumes no conversion slot.
 
-1. Start, null hints, LE/BE-headerparsing, negatieve PTS, 64-bit grenzen,
-   gefragmenteerde WebSocket-message en payloadlengtemismatch.
-2. Verkeerde sequence/generation/type/JSONduplicate/unknowntype en format na data.
-3. Nul outputcredit met functionerende control/cancel, volle inputqueue,
-   creditlimiet zonder overflow, paused reader en peer die budget negeert.
-4. Decoder produceert nul/twee frames, encoder produceert uitgesteld packet,
-   end_input met open FIFO-tail, cancel tijdens priming en drain.
-5. STREAMINFO/body versus header, channelorder 5.1/7.1, gewijzigde sample rate,
-   skip_samples, missing timestamps, start op niet-nul seekpositie en discontinuïteit.
-6. Appoutput → fMP4 → werkelijk Apple-playeritem, geen vertrouwen op JSON alleen.
+## 7. Required interoperability fixtures
 
-Protocolmajor v1 verandert alleen met expliciete version bump. Service-SemVer en
-appversie mogen onafhankelijk doorlopen zolang de wirecompatibiliteit gelijk blijft.
+1. Start, null hints, LE/BE header parsing, negative PTS, 64-bit limits,
+   fragmented WebSocket messages and payload-length mismatch.
+2. Wrong sequence/generation/type, duplicate JSON keys, unknown type and format
+   received after data.
+3. No remaining output credit with working control/cancel, full input queue,
+   overflow-safe credit limits, paused reader and a peer ignoring its budget.
+4. Decoder producing zero/two frames, delayed encoder packet, end_input with a
+   FIFO tail, cancellation during priming and drain.
+5. STREAMINFO body versus header, 5.1/7.1 channel order, changed sample rate,
+   skip samples, missing timestamps, nonzero seek start and discontinuity.
+6. App output through fMP4 into an actual Apple player item; JSON alone is not proof.
+
+Protocol major v1 changes only through an explicit version bump. Service SemVer
+and app version can advance independently while wire compatibility is retained.

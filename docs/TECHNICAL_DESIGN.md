@@ -1,290 +1,285 @@
-# Technisch ontwerp — CinemaSeat Audio Decoder
+# Technical design — CinemaSeat Audio Decoder
 
-Ontwerpdatum: 2026-11-01, Europe/Amsterdam. Status: klaar voor implementatieplanning.
-Doeluitvoerder: Sol, redeneerniveau gemiddeld. Lees ook het normatieve
-[protocolcontract](PROTOCOL_V1.md) en de [startopdracht](SOL_HANDOFF.md).
+Design date: 2026-11-01, Europe/Amsterdam. Intended implementer: one Sol at medium
+reasoning effort. This is the approved design, not a statement that every part is
+implemented. The service is now in its own private repository; consult current
+[implementation status](IMPLEMENTATION_STATUS.md), the normative
+[protocol](PROTOCOL_V1.md) and [handoff](SOL_HANDOFF.md) before making changes.
+Repository documentation is maintained in English.
 
-## 1. Opdracht, toestemming en grenzen
+## 1. Authorization and boundaries
 
-De gebruiker keurde goed: een lean Docker-audioconverter, geen UI of toegang tot
-bronbestanden, configuratie in een settingsbestand, optionele debuglogs naar een
-bestand, FLAC-uitvoer en transparante integratie in **Apple TV Standard**. In de
-audiosectie van de algemene spelersinstellingen komen uitsluitend enabled,
-adres en poort. De service ondersteunt gelijktijdige sessies; één goed werkende
-sessie op zowel DS923+ als ODROID-N2+ is vereist. Het maximale praktische aantal
-parallelle sessies is een meetresultaat, geen vooraf beloofd getal.
+The user approved a lean Docker audio converter with no UI or source-file access,
+a settings file, optional file debug logging, FLAC output and transparent
+integration in **Apple TV Standard**. General Playback settings / Audio gets
+only enabled, address and port. The service supports concurrent sessions. One
+sustained working session is required on both DS923+ and ODROID-N2+; practical
+higher concurrency is a measured result, not a promised number.
 
-Deze opdracht maakt het ontwerp, geen implementatie. De latere bouwopdracht geeft
-uitsluitend toestemming voor de hier beschreven externe FLAC-route. Geen
-herontwerp van de bestaande ALAC-route, geen lokale DTS/Dolby-decoder toevoegen
-aan Standard, geen iPad-werk en geen gedragsverandering in Full. Nieuwe
-media-experimenten lopen via de bestaande Diagnose-app. Geen aparte tvOS-probeapp.
+The initial task created this design; subsequent implementation authorization is
+limited to the external FLAC route described here. Do not redesign existing ALAC,
+add blocked local DTS/Dolby decoders to Standard, perform iPad work or change Full
+behavior. New media experiments use the existing Diagnose app, never a separate
+tvOS probe app. Private service Git commits/pushes have since been authorized;
+public releases, images and device installation have not.
 
-Non-goals: Atmos/DTS:X-objectweergave, video op de converter, serverlibrary,
-accounts, bron-URL's, bestandsmounts, transcoding naar AAC, normalisatie,
-downmix, resampling, autodiscovery, internettoegang of beheerwebsite.
+Non-goals: Atmos/DTS:X object rendering, video conversion, server library,
+accounts, source URLs, file mounts, AAC transcoding, normalization, downmix,
+resampling, autodiscovery, runtime internet access or an administration website.
 
-## 2. Geïnspecteerde appbasis
+## 2. Inspected app baseline
 
-Git HEAD bij ontwerp: `b69bcf0a21becef3350632764aa4cf287c010bea`, met een omvangrijke
-bestaande, deels staged werkboom. Die werkboom is de gelezen bron van waarheid;
-HEAD alleen reproduceert de toestand niet. Bewaar bestaand werk. Lees vóór elke
-fase opnieuw de relevante bronnen; pas aansluitpunten aan wanneer namen wijzigen.
+Design HEAD in the app repository was
+`b69bcf0a21becef3350632764aa4cf287c010bea`, with a substantial existing partially
+staged worktree. That inspected worktree, not HEAD alone, defined the design
+baseline. Preserve unrelated work and reread relevant sources before each phase.
+Actual implementation later started at f083bb1 with a clean tree; see BASELINE.md.
+Historical names are not a reason to roll back newer code.
 
-| Actuele bron in apprepository | Rol en consequentie |
+| Source in the separate app repository | Role and integration consequence |
 | --- | --- |
-| `CinemaPlexTV/Core/Models/MediaItem.swift`, `AudioAvailability` | `requiresServer` selecteert DTS/DCA/TrueHD/MLP; availability gebruikt al servergebonden generaties. Externe decoder krijgt een eigen beschikbaarheidsroute, zonder bestaande serverstatus te overschrijven. |
-| `scripts/check_audio_variant.py` | Standard verbiedt DCA/TRUEHD/MLP/AC3/EAC3-decoder-/encodersymbolen. Dit verbod blijft intact. Parsen/demuxen is al toegestaan. |
-| `docs/AUDIO_BUILD_VARIANTS.md` | AC-3/E-AC-3 worden lokaal gekopieerd naar Apple; deze service is daarvoor niet nodig. FLAC-speleritemvalidatie en serveraudio bestaan al. |
-| `Player/FFmpeg/Bridge/FFmpegPlaybackExecution.m` | Geselecteerde audiostream, Standard-codecguard, lokale decode/encode, header schrijven, packetloop en EOF-drain. Nieuwe expliciete externe tak komt vóór de bestaande Standard-afwijzing. |
-| `Player/FFmpeg/Bridge/FFmpegPlaybackPacketIO.h` en timinghelpers | Bestaande bias/pending-audio/interleaved-write hebben één eigenaar. Geen tweede timestampbias invoeren. |
-| `Player/FFmpeg/FFmpegTypes.swift`, command builder en engine | Outputprofiel en HLS-codecmetadata moeten FLAC weerspiegelen wanneer de externe route actief is. Bestaand ALAC-profiel ongemoeid laten. |
-| `PlayerViewModel+Preparation.swift`, `PlayerViewModel.swift` | Bestaande serverkeuze, seek/trackwissel, cancellation en readiness. Externe sessie moet dezelfde levensduur volgen. |
-| `UI/Views/SettingsView.swift` | Algemene Playback/Audio-instellingen en Save/Discard-draft. `PlaybackSettingsView.swift` is juist het afspeeloverlay; plaats de nieuwe verbindingsinstellingen daar niet. |
-| `NAS/Database/NASDatabaseBackup.swift` | Huidige volledige back-up heeft formaat 5, databaseschema 7. Gebruik de actuele versie, geen historische formaat-3-aanname. |
-| `CloudSync/SyncContract.swift` | Bestaande voorkeurensync; nieuwe decoderinstelling blijft voor deze feature lokaal per apparaat. Geen synccontractuitbreiding nodig. |
-| `Diagnostics/Core/DiagnosticReport.swift`, `docs/diagnostics/schemas`, `scripts/validate_diagnostics.py` | Verplichte uitbreiding voor nieuwe experimentele evidence en stabiele criterium-ID's. |
-| `Vendor/FFmpeg/SOURCE_REVISION`, vendorheaders | Effectieve FFmpeg-API en bronrevision controleren vóór code. Appdocumentatie noemt 9.0.2; pin de service expliciet, gebruik geen willekeurige systeem-FFmpeg. |
+| `CinemaPlexTV/Core/Models/MediaItem.swift`, `AudioAvailability` | `requiresServer` selects DTS/DCA/TrueHD/MLP; availability already has server-scoped generations. External decoding needs an independent availability route without overwriting server state. |
+| `scripts/check_audio_variant.py` | Standard forbids DCA/TRUEHD/MLP/AC3/EAC3 decoder/encoder symbols. Preserve this hard exclusion; parsing/demuxing is already permitted. |
+| `docs/AUDIO_BUILD_VARIANTS.md` | AC-3/E-AC-3 are locally copied to Apple's player and do not need this service. FLAC item validation and server audio already exist. |
+| `Player/FFmpeg/Bridge/FFmpegPlaybackExecution.m` | Selected audio stream, Standard guard, local codec setup, header, packet loop and EOF drain. Add an explicit external branch before the existing Standard rejection. |
+| `Player/FFmpeg/Bridge/FFmpegPlaybackPacketIO.h` and timing helpers | Existing bias, pending audio and interleaved writes each have one owner. Do not introduce a second timestamp bias. |
+| `Player/FFmpeg/FFmpegTypes.swift`, command builder and engine | Output profile and HLS codec metadata must say FLAC when external audio is active. Leave the ALAC profile intact. |
+| `PlayerViewModel+Preparation.swift`, `PlayerViewModel.swift` | Server selection, seek/track changes, cancellation and readiness. External sessions follow the same lifetimes. |
+| `UI/Views/SettingsView.swift` | General Playback/Audio settings and the Save/Discard draft. `PlaybackSettingsView.swift` is the playback overlay and must not receive connection settings. |
+| `NAS/Database/NASDatabaseBackup.swift` | Inspected full backup format 5, database schema 7. Use current versions rather than historical format-3 assumptions. |
+| `CloudSync/SyncContract.swift` | Existing preference sync; external decoder settings stay local per device, without extending the sync contract. |
+| `Diagnostics/Core/DiagnosticReport.swift`, `docs/diagnostics/schemas`, `scripts/validate_diagnostics.py` | Extend these together for experimental evidence and stable criterion IDs. |
+| `Vendor/FFmpeg/SOURCE_REVISION` and headers | Inspect effective APIs and revision before code. Historical app docs mention 9.0.2; pin the service explicitly, never use an arbitrary system FFmpeg. |
 
-Paden vanaf `Player/...` zijn onder `CinemaPlexTV/`. Bovenstaande is een
-aansluitkaart, geen opdracht om al die bestanden zonder noodzaak te wijzigen.
+Paths starting `Player/...`, `UI/...` or `NAS/...` are below `CinemaPlexTV/` in the
+app checkout. This is a map of integration points, not permission for unnecessary
+changes to every listed file.
 
-## 3. Architectuur en projectindeling
+## 3. Architecture and project boundary
 
 ```text
-CS: bron openen → demux → geselecteerde DTS/TrueHD/MLP-pakketten
-                              │ WebSocket, uitsluitend audio
+CS: open source → demux → selected DTS/TrueHD/MLP packets
+                              │ WebSocket, audio only
                               ▼
-service: protocol → decoder → PCM/FIFO → FLAC-encoder → protocol
-                              │ FLAC-pakketten + configuratie/timing
+service: protocol → decoder → PCM/FIFO → FLAC encoder → protocol
+                              │ FLAC packets + format/timing
                               ▼
-CS: native audiobrug → bestaande fMP4/HLS-mux → bestaande AVPlayer
-    videopakketten blijven lokaal in de bestaande videoroute
+CS: native audio bridge → existing fMP4/HLS mux → existing AVPlayer
+    video packets stay local in the existing video path
 ```
 
-Kies C++20, CMake, Boost.Asio/Beast voor HTTP/WebSocket, nlohmann/json voor JSON,
-FFmpeg `libavcodec` + `libavutil` + eventueel `libswresample` voor exact
-sampleformaattransport zonder samplerate/layoutwijziging. Geen `libavformat`
-nodig in de runtimeservice: CS levert reeds gedemuxte pakketten. Geen subprocess
-per pakket of shellcommando's. Dependencies vastpinnen met revision/hash en
-licentiemanifest. Geen volledige FFmpeg-cli in het runtime-image.
+Use C++20, CMake, Boost.Asio/Beast for HTTP/WebSocket, nlohmann/json for JSON and
+FFmpeg libavcodec/libavutil. libswresample is optional only for exact sample-format
+transport without rate/layout changes. Runtime libavformat is unnecessary: CS
+already demuxes input. No subprocess per packet or shell conversion pipeline.
+Pin sources by revision/hash with a license manifest. Do not include the full
+FFmpeg CLI in the runtime image.
 
-Geplande structuur, pas aanmaken in implementatiefase:
+The independent service repository contains VERSION, CHANGELOG, dependency
+notices, CMake, src, tests, config, dependencies, Dockerfiles, scripts and docs.
+A root `docker-compose.yml` provides Dockge deployment; the older example remains
+under docker/. Session implementation may share server.cpp rather than require
+one file per originally proposed class. A public project LICENSE must be selected
+before public release. Swift/Objective-C integration stays in the app repository;
+the wire protocol is the project boundary. Share identical protocol fixtures.
 
-```text
-VERSION, CHANGELOG.md, LICENSE, THIRD_PARTY_NOTICES.md
-CMakeLists.txt, CMakePresets.json
-src/{main,config,server,session,codec_pipeline,wire,logging}.{cpp,hpp}
-tests/{unit,protocol,integration,fixtures,performance}/
-config/settings.example.json
-docker/{Dockerfile,compose.example.yaml}
-scripts/{build_dependencies,check_codec_registry,run_checks,benchmark}.*
-dependencies/manifest.json
-docs/{deze documenten,DEPLOYMENT.md}
-```
+Service builds/tests must not need the parent app. Host fixtures may read files;
+the production converter may not. Use generated/license-free PCM or authorized
+user sources for test media. Never commit commercial film excerpts. Do not create
+a nested Git repository or submodule in the app checkout.
 
-Servicebuild en tests mogen de bovenliggende app niet nodig hebben. Hostfixtures
-mogen bestanden lezen; productieconverter niet. Testmedia worden lokaal uit
-gegenereerde/licentievrije PCM of door gebruiker verstrekte bronnen gemaakt;
-geen commerciële filmfragmenten committen.
+## 4. Tasks, ownership and concurrency
 
-## 4. Taken, eigendom en gelijktijdigheid
+- One process, one acceptor and two network I/O threads by default.
+- Each socket has a Beast strand, with at most one read and one write in flight.
+  One bounded scheduler owns every write, including close/control messages.
+- Each admitted session has one codec worker and its own decoder, encoder and PCM
+  FIFO. Never access one codec context from two threads concurrently.
+- Default to one codec thread per decoder/encoder. Do not use auto threading
+  that claims every core for each session. Configuration allows a small bounded count.
+- Network callbacks do not decode audio; codec workers do not block I/O strands.
+- Queues retain owned buffers or refcounted AVPackets, never pointers into Swift
+  Data or reused demux packets.
+- Use RAII for every AV object. Cancellation wakes credit, queue and format waits.
+  Complete exactly once; never kill a worker unsafely. Shutdown closes I/O and
+  waits within bounds. A genuinely stuck codec is a process failure, not cleanup success.
+- One codec crash may affect all sessions: an accepted v1 single-process limit,
+  not process isolation. Ordinary session errors remain local.
 
-- Eén proces, één acceptor, twee netwerk-I/O-threads standaard.
-- Per socket een Beast-strand: maximaal één read en één write tegelijk; alle
-  writeverzoeken inclusief close/control door één begrensde scheduler.
-- Per toegelaten sessie één codecworker met eigen decoder, encoder en PCM-FIFO.
-  Codeccontexten worden nooit door twee threads tegelijk gebruikt.
-- Start standaard met één codec-thread per decoder/encoder. Geen `auto` dat alle
-  cores voor elke sessie claimt. Configureer een klein begrensd threadaantal.
-- Netwerkcallbacks decoderen geen audio; codecworker blokkeert geen I/O-strand.
-- Queues bewaren uitsluitend owned buffers/refcounted AVPackets, geen pointers
-  naar Swift-Data of een hergebruikte demuxpacket.
-- RAII voor alle AV-objecten. Annulering wekt credit-, queue- en formatwaits.
-  Completion wordt exact eenmaal afgehandeld. Stop nooit een worker met een
-  onveilige thread kill. Shutdown sluit I/O en wacht begrensd; een daadwerkelijk
-  vastgelopen codec wordt als processtoring gerapporteerd, niet als opgeruimd.
-- Codec-crash kan alle sessies raken: bewust geaccepteerde eerste-versiegrens
-  van één proces; geen claim van procesisolatie. Normale sessiefouten blijven lokaal.
+## 5. Formats and quality contract
 
-## 5. Formaten en kwaliteitscontract
+Wire input codec IDs are `dts`, `truehd` and `mlp`; map only to corresponding
+FFmpeg IDs and never send numeric FFmpeg enums. The first interoperable version
+targets 1–8 channels, 8–192 kHz and integer audio up to 24 significant bits. An
+unsupported DTS profile is not a DTS-core success. Compare DTS-HD MA fixtures
+against full local HD decode, not core-only output.
 
-Invoercodec-ID's op de wire: `dts`, `truehd`, `mlp`. Map uitsluitend naar de
-bijbehorende FFmpeg-IDs; stuur geen numerieke FFmpeg-enums over het netwerk.
-Accepteer 1–8 kanalen, 8–192 kHz en integer-audio tot 24 significante bits voor
-de eerste interoperabele versie. Een DTS-profiel dat niet gedecodeerd kan worden
-is niet automatisch een DTS-core-success. DTS-HD MA-fixtures vergelijken PCM
-met de volledige lokale HD-decode, niet alleen de core.
+Actual decoded frames establish rate, layout and precision. Source metadata may
+be incomplete, but a known conflicting claim must be reported. No silent
+truncation, precision loss or stereo default. Unsupported layout/float conversion
+is `unsupported_format` until exact conversion is proven independently. A midstream
+format change is `format_changed` and ends the session; do not silently reconfigure.
 
-De eerste echte gedecodeerde frames bepalen samplefrequentie/layout/precisie.
-Bronmetadata kan onvolledig zijn, maar een bekende conflicterende bronclaim moet
-worden gemeld. Geen stille truncatie, ongemerkte precision loss of default stereo.
-Niet ondersteunde layout/floatconversie geeft `unsupported_format`, totdat een
-exacte conversie afzonderlijk met fixtures bewezen is. Midstream formaatwijziging
-geeft `format_changed` en beëindigt de sessie; niet stiekem herconfigureren.
+Initialize FLAC with global header, time base `1/sample_rate`, target block size
+4096 and compression level 1. Check effective values after opening; defaults can
+vary across FFmpeg versions. Permit only integer packing/planar interleaving that
+preserves values, rate and channels. The FIFO has a hard cap and fully drains at EOF.
 
-Initialiseer FLAC met global-header, sample-timebase `1/sample_rate`, beoogde
-blocksize 4096 en compression level 1. Controleer effectieve waarden na open;
-defaults kunnen per FFmpeg-versie verschillen. Alleen integer packing/
-planarinterleaving zonder waarde-, samplerate- of kanaalwijziging is toegestaan.
-FIFO heeft een harde bovengrens en wordt na EOF volledig gedraineerd.
+The decoder send/receive loop handles EAGAIN by draining the opposite side rather
+than busy waiting. One packet may produce zero or multiple frames. Apply official
+input padding. Decoder trimming/skip samples happen exactly once; output timing
+already describes valid samples. Drain decoder, any sample-format buffer, FIFO
+and encoder in that order.
 
-De decoder-send/receive-lus behandelt EAGAIN door de tegenovergestelde kant te
-drainen, niet door busy wachten. Eén packet kan nul of meerdere frames geven.
-Pas officiële inputbufferpadding toe. Decodertrim/skip-samplegedrag wordt precies
-eenmaal toegepast; de outputtimeline beschrijft reeds geldige samples. Drain
-decoder, eventuele sampleformaatbuffer, FIFO en encoder in die volgorde.
+Seek priming has a finite budget: at most 256 input packets or two seconds of
+anchored source duration, whichever occurs first. Within that budget, skip only
+proven leading fragments before first codec sync, recording counts/reasons in
+evidence. Reuse the existing Diagnose DTS seek-priming investigation. Do not
+ignore arbitrary decode errors. Corruption after first valid sync/frame is fatal.
+No usable sync within budget is `decode_failed`. A TrueHD seek without major sync
+needs source preroll from the existing reader, not invented samples.
 
-Zoekpriming heeft een expliciet eindig budget: maximaal 256 inputpackets of twee
-seconden geankerde bronduur, wat eerst bereikt wordt. Binnen dit budget mogen
-alleen aantoonbare leading fragments vóór de eerste codec-sync worden overgeslagen,
-met telling/reden in evidence. Hergebruik het bestaande Diagnose-onderzoek naar
-DTS-seekpriming als referentie; laat niet elk willekeurig decode-error door.
-Na eerste geldige sync/frame is decodecorruptie fataal. Zonder bruikbare sync
-binnen budget: `decode_failed`. Een TrueHD-seek zonder major sync vraagt voldoende
-bronpreroll uit de bestaande reader, niet een decoder die samples verzint.
+Streaming FLAC STREAMINFO may have unknown total samples/MD5. The client uses live
+extradata for fMP4 without rewriting a final header. Verify that the pinned encoder
+provides usable extradata after opening. Replace any backend that requires seekable
+output. Current limitations, including rejected lossy XLL recovery, are documented
+in IMPLEMENTATION_STATUS.md; design targets are not blanket support claims.
 
-FLAC-STREAMINFO kan streaming-onbekende total samples/MD5 hebben. De client gebruikt
-live extradata voor fMP4 en hoeft geen eindheader terug te schrijven. Verifieer
-dat de gepinde encoder reeds bruikbare extradata na open levert. Een backend die
-een seekbare uitgang vereist voldoet niet aan de eis en moet vervangen worden.
+## 6. Timing, seek and mux integration
 
-## 6. Timing, seek en mux-integratie
+The protocol defines the absolute sample timeline. Required invariants:
 
-Zie protocol voor de absolute sampletijdlijn. Cruciale invarianten:
+1. The service knows audio source time only, with no video offset or CS-relative bias.
+2. The client applies source-to-local output time and existing video bias exactly once.
+3. Derive decoder delay/trimming from frame timing, sample counts and official side
+   data, not a one-packet-in/one-packet-out assumption.
+4. Each seek creates a new socket, session and client generation. Do not flush a
+   network session that can still produce old results.
+5. CS preserves necessary preroll/timestamps and uses existing seek/playhead logic
+   at the target. Do not arbitrarily cut FLAC frames.
 
-1. Service kent alleen audio-brontijd; geen video-offset of CS-relatieve tijdbias.
-2. De client past source→lokale outputtijd en bestaande videobias exact één keer toe.
-3. Decodervertraging en trimming worden afgeleid uit gedecodeerde frametiming,
-   sampleaantallen en officiële side data; niet uit één packet-in/packet-uit-aanname.
-4. Een zoekopdracht krijgt een nieuwe socket, sessie en clientgeneratie. Geen
-   netwerkflush op een sessie die nog oude resultaten kan produceren.
-5. CS houdt benodigde preroll en timestamps aan. De afspeelstart op het doel
-   gebruikt de bestaande seek/playheadlogica; niet willekeurig FLAC-frames afknippen.
+### 6.1 Prove preheader startup first
 
-### 6.1 Header-/startupvalkuil eerst oplossen
+`avformat_write_header` needs actual FLAC parameters before mux start. They may
+become known only after several input packets. Add a bounded preheader phase:
+read ahead with the same demuxer, submit selected audio, retain necessary video/
+audio packet references and wait for `output_format`. Retain at most 32 MiB or
+five seconds of source media, whichever occurs first. Exceeding the limit is
+`format_probe_limit`; never allow an unbounded buffer.
 
-`avformat_write_header` heeft de werkelijke FLAC-parameters nodig vóór muxstart.
-Die kunnen pas na enkele bronpakketten bekend zijn. Voeg daarom een begrensde
-preheaderfase toe: lees met dezelfde demuxer vooruit, stuur geselecteerde audio,
-bewaar noodzakelijke video-/audiopakketten met refs en wacht op `output_format`.
-Bewaar hoogstens 32 MiB of 5 seconden bronmedia, wat eerst bereikt wordt; bij
-overschrijding expliciet `format_probe_limit`, geen onbegrensde buffer.
+After format validation, create the output stream, write the header and replay
+retained packets exactly once. No second source reader and no media file sent to
+the service. Prove this in Diagnose before production.
 
-Na formatvalidatie maak je de outputstream, schrijf je de header en replay je de
-bewaarde packets exact eenmaal. Geen tweede bronreader naast de bestaande
-demuxer, geen bronbestand naar de service. Bewijs dit eerst in Diagnose.
+### 6.2 Reusable client/native bridge
 
-### 6.2 Client/native bridge
+Proposed app components:
 
-Geplande nieuwe appcomponenten (namen zijn voorgeschreven voorstel):
+- `Core/Models/ExternalAudioDecoderSettings.swift`: version-1 local configuration.
+- `Player/ExternalAudio/ExternalAudioRoutePolicy.swift`: pure route decisions.
+- `ExternalAudioSession.swift`: actor using URLSessionWebSocketTask, bounded
+  queues, protocol codec, timeouts and generation checks.
+- `ExternalAudioWire.swift`: pure binary/JSON parser without UI/AVPlayer.
+- `FFmpeg/Bridge/FFmpegExternalAudio.{h,m}`: explicit contract between the native
+  packet loop and Swift transport; no Objective-C block per byte.
 
-- `Core/Models/ExternalAudioDecoderSettings.swift`: versie-1 lokale configuratie.
-- `Player/ExternalAudio/ExternalAudioRoutePolicy.swift`: pure beslislogica.
-- `ExternalAudioSession.swift`: actor met URLSessionWebSocketTask, bounded queues,
-  protocolcodec, timeouts en generatiecontrole.
-- `ExternalAudioWire.swift`: pure binaire/JSON-parser, geen UI of AVPlayer.
-- `FFmpeg/Bridge/FFmpegExternalAudio.{h,m}`: expliciet sessiecontract tussen
-  bestaande native packetloop en Swift transport; geen Objective-C-block per byte.
+Pass an owned route configuration/session handle through typed request fields,
+not FFmpeg command text or global defaults. The native guard permits a blocked
+source only with a valid external-FLAC route object; otherwise retain rejection.
+Never open a blocked local decoder.
 
-De native bridge krijgt een owned routeconfig/sessiehandle via getypeerde request-
-velden; nooit via extra tekst in het FFmpeg-commandargument of globale defaults.
-Native codecguard staat de geblokkeerde bron uitsluitend toe bij een geldig
-external-FLAC-routeobject; zonder object blijft de bestaande afwijzing gelden.
-Er wordt lokaal géén geblokkeerde decoder geopend.
-
-Voorgesteld expliciet bridgecontract, uit te werken naast de bestaande executor:
-
-| Operatie | Vereiste semantiek |
+| Operation | Required semantics |
 | --- | --- |
-| `open(config, generation, cancellation)` | Asynchroon naar Swift transport; geeft één owned sessiehandle. Geen native muxlock over await houden. |
-| `submitInput(packet)` | Ref/copy van packet en allowlisted side data; accepted/wouldBlock/failure. Bij wouldBlock eerst receive/control pompen; niet packet droppen. |
-| `pollFormat()` | notReady/validatedFormat/failure; bruikbaar tijdens preheaderfase. |
-| `pollOutput()` | notReady/ownedPacket/end/failure; niet-blokkerend voor muxowner. |
-| `finishInput()` | Exact eenmaal na laatste accepted input; geen impliciet cancel. |
-| `cancel()` | Idempotent, wekt alle waits; late completions blijven bij oude generatie. |
-| `close()` | Ownership vrijgeven na worker/networkcompletion, exact eenmaal. |
+| `open(config, generation, cancellation)` | Asynchronous Swift transport; returns one owned session handle. Hold no native mux lock across await. |
+| `submitInput(packet)` | Ref/copy packet and allowlisted side data; accepted/wouldBlock/failure. On wouldBlock, pump receive/control; never drop input. |
+| `pollFormat()` | notReady/validatedFormat/failure; usable during preheader. |
+| `pollOutput()` | notReady/ownedPacket/end/failure; nonblocking for the mux owner. |
+| `finishInput()` | Exactly once after the last accepted input; no implicit cancellation. |
+| `cancel()` | Idempotent, wakes all waits; late completions remain scoped to the old generation. |
+| `close()` | Release ownership exactly once after worker/network completion. |
 
-De Objective-C-sessiehandle bevat een sterke referentie naar zijn Swift-owner
-tot close; callbacks gebruiken geen onbeschermde raw pointers. Eén wachtprimitive
-met cancellation signaleert nieuwe credit, format, output of failure. Gebruik
-geen periodieke busy-poll om de native loop 'responsief' te houden. De bestaande
-FFmpeg-interruptcallback moet ook deze waits kunnen beëindigen.
+The Objective-C handle strongly retains its Swift owner until close. Callbacks
+must not use unprotected raw pointers. One cancellable wait primitive signals new
+credit, format, output or failure. Do not use periodic busy polling. Existing
+FFmpeg interrupt callbacks must also terminate these waits.
 
-Eén native muxowner schrijft alle outputstreams. Swift receive valideert en
-enqueued FLAC-pakketten; schrijft nooit rechtstreeks in AVFormatContext. Mainloop
-pompt remote audio tussen demuxstappen en bij EOF, bewaart bestaande interleaving
-en productiebudgetten. Geen sequentieel 'stuur packet, wacht op precies één antwoord':
-dat veroorzaakt deadlocks bij decoder-/encoderbuffering. Tijdens creditwait moet
-receive/control/cancel blijven lopen. Als video door interleaving tijdelijk moet
-wachten, gelden dezelfde bounded queues en cancellable waits.
+One native mux owner writes all streams. Swift receive validates/enqueues FLAC
+packets and never writes directly into AVFormatContext. The main loop pumps remote
+audio between demux steps and at EOF, preserving interleaving and production
+budgets. Do not serialize send-one-packet/wait-for-one-response: codec buffering
+would deadlock. During credit waits, receive/control/cancel continue. If video
+must wait for interleaving, its queues/waits remain bounded and cancellable.
 
-AVPacket side data verlaat de app alleen volgens protocolallowlist. Nieuw
-codec-extradata tijdens een sessie wordt geweigerd met `format_changed`;
-geen nieuwe pipeline met half oude samples. Voeg productiecode alleen toe aan
-relevante Xcode-/hostharnesses en behoud bestaande publieke testcontracten.
+Only allowlisted AVPacket side data leaves CS. New codec extradata in a session
+is `format_changed`; do not mix old/new samples in a reconfigured pipeline. Add
+production sources to relevant Xcode/host harnesses and preserve existing public
+test contracts.
 
-## 7. Routeselectie en instellingen
+## 7. Route selection and settings
 
-| Situatie | Gedrag |
+| Situation | Behavior |
 | --- | --- |
-| Full, of externe optie uit | Huidig gedrag exact behouden. |
-| Standard, ondersteunde/native codec | Huidige route; geen converterverbinding. |
-| Standard, DTS/TrueHD/MLP, external enabled, originele bron bereikbaar | Eerst externe FLAC-route. |
-| Externe voorbereiding mislukt | Hoogstens één bestaande toegestane route proberen; geen retryloop. |
-| Uitval tijdens afspelen | Gecontroleerde herstart op actuele bronpositie via toegestane fallback; anders stoppen met heldere fout. |
-| Server levert alleen bestaande serverconversie, geen originele bytes | Service kan niets uit een onbereikbare originele track halen; gebruik bestaande serverpolicy of meld expliciet ontbrekende route. |
+| Full, or external option disabled | Preserve existing behavior exactly. |
+| Standard, supported/native codec | Existing route; no converter connection. |
+| Standard DTS/TrueHD/MLP, external enabled, original source reachable | Try external FLAC first. |
+| External preparation fails | Try at most one existing permitted route; no retry loop. |
+| Failure during playback | Controlled restart at current source position through a permitted fallback, otherwise stop with a clear error. |
+| Server offers only its conversion, not original bytes | The service cannot retrieve an unreachable original track. Use existing server policy or explicitly report no route. |
 
-Fallback mag geen audiotrack, taal, kanaalindeling of kwaliteit stilzwijgend
-veranderen. Een bestaande ingestelde FLAC-serverroute is alleen bruikbaar als de
-feitelijke output aan dit kanaal-/kwaliteitscontract voldoet. Geen automatische
-AAC-fallback vanuit externe lossless-audio, ook al bestaat elders een expliciete
-AAC-serverinstelling. Zonder externe route blijven alle bestaande serverpolicies
-ongewijzigd. Dit voorkomt dat de nieuwe functie een impliciete downgrade invoert.
+Fallback must not silently change track, language, layout or quality. An existing
+configured FLAC server route is usable only if actual output satisfies the same
+channel/quality contract. Do not automatically fall back from external lossless
+audio to AAC, even when an explicit AAC server setting exists elsewhere. Without
+an external route, retain existing server policies.
 
-Browsebeschikbaarheid: enabled plus geldige configuratie maakt een geblokkeerde
-track kandidaat, geen gegarandeerde live pass. Geen request per filmtegel.
-Bereikbaarheid/capabilities cachen hoogstens 30 seconden, scoped op endpoint en
-configuratiegeneratie. Verbindingsfouten zijn geen permanente codec-onbeschikbaarheid.
-Een endpointwissel maakt oude cache en pending completions ongeldig. Een lopende
-sessie houdt zijn configuratiesnapshot; wijzigingen gelden voor volgende sessies.
+Browsing availability: enabled plus valid configuration makes a blocked track a
+candidate, not a guaranteed live pass. Do not request per movie tile. Cache
+reachability/capabilities for at most 30 seconds, scoped to endpoint/configuration
+generation. Connection failures do not establish permanent codec unavailability.
+An endpoint change invalidates old cache/pending completions. Active sessions
+retain their configuration snapshot; edits affect subsequent sessions.
 
-UI uitsluitend tvOS Standard in algemene Spelersinstellingen/Audio:
+UI appears only in tvOS Standard's general Playback settings / Audio:
 
-- `Externe audiodecoder gebruiken`, standaard uit.
-- `Adres`, alleen hostname/IPv4/IPv6; geen scheme, URL-pad, userinfo of query.
-- `Poort`, integer 1–65535, voorgesteld standaard 9078.
-- Adres/poort alleen zichtbaar bij enabled; geen testknop of extra statuspagina.
-- Bestaande Save/Discard en validatie volgen; port/host niet normaliseren met
-  stringconcatenatie maar via URLComponents, inclusief IPv6.
+- Use external audio decoder: off by default.
+- Address: hostname/IPv4/IPv6 only, without scheme, path, userinfo or query.
+- Port: integer 1–65535, proposed default 9078.
+- Show address/port only while enabled; no test button or additional status page.
+- Follow existing Save/Discard/validation. Use URLComponents, including IPv6,
+  rather than string concatenation to normalize host/port.
 
-Bewaar lokaal onder `audio.externalDecoder.configuration.v1`: version, enabled,
-host, port. Geen secrets. Geen iCloud-sync voor deze nieuwe apparaatinstelling.
-Neem hem wel op in handmatige volledige configuratie-export. Verhoog daartoe
-het huidige back-upformaat 5 naar 6, met verplicht valide nieuw veld voor formaat
-6. Lees formaten 1–5 met default disabled, behoud hun bestaande validatie; behoud
-databaseschema 7. Oudere apps moeten formaat 6 duidelijk afwijzen. Op iPad/Full
-mag gedeelde import/export het veld verliesvrij bewaren, maar de nieuwe route
-en UI blijven uitgeschakeld; hiervoor geen iPad-build of feature uitvoeren.
+Persist locally under `audio.externalDecoder.configuration.v1`: version, enabled,
+host, port. No secrets or iCloud sync. Include it in manual full configuration
+export: migrate current backup format 5 to 6, requiring a valid new field in 6.
+Read formats 1–5 with disabled defaults, retaining legacy validation and DB schema
+7. Older apps must reject 6 clearly. Shared import/export on iPad/Full may preserve
+the field losslessly, while route/UI stay disabled. This authorizes no iPad build
+or feature work. Reconcile current versions if they advance before integration.
 
-Controleer bij implementatie actuele local-network/privacy-/ATS-instellingen.
-Voeg alleen noodzakelijke lokale HTTP/WebSocket-toestemming toe, geen algemene
-onbeperkte internet-ATS-uitzondering. Thuisnetwerk-only is een deploymentgrens:
-geen portforwarding. Geen claim van encryptie/authenticatie op `ws://`.
+Inspect current local-network/privacy/ATS settings during implementation. Add
+only necessary local HTTP/WebSocket permission, never an unrestricted internet
+ATS exception. LAN-only is a deployment boundary; no port forwarding and no claim
+of authentication/encryption over `ws://`.
 
-## 8. Settingsbestand, limieten en logging
+## 8. Settings, limits and logging
 
-Lees `/config/settings.json` eenmaal bij start. Mount als read-only file; geen
-mediavolume. Wijzigingen worden actief na containerrestart. Onbekende keys,
-verkeerde types, ongeldige waarden of ontbrekend bestand geven startup failure
-met veilige, concrete melding. Ontbrekende optionele velden krijgen hieronder
-gedocumenteerde defaults. Voorbeeld van de beoogde configuratie, geen executable:
+Read `/config/settings.json` once on startup, mounted read-only with no media
+volume. Changes take effect after restart. Unknown keys, wrong types, invalid
+values or a missing file fail startup with a safe concrete message. Missing
+optional fields use the defaults below. The current example file is authoritative
+for values; this block records the approved settings contract.
 
 ```json
 {
   "version": 1,
-  "listen": {"address": "0.0.0.0", "port": 9078},
-  "sessions": {"maximum": 4, "codec_threads": 1},
+  "listen": {
+    "address": "0.0.0.0",
+    "port": 9078
+  },
+  "sessions": {
+    "maximum": 4,
+    "codec_threads": 1
+  },
   "limits": {
     "control_message_bytes": 65536,
     "packet_payload_bytes": 1048576,
@@ -312,178 +307,181 @@ gedocumenteerde defaults. Voorbeeld van de beoogde configuratie, geen executable
 }
 ```
 
-Harde configuratieranges: sessions 1–32, codec_threads 1–4; protocolberichtlimieten
-mogen naar beneden, niet boven protocolmax. Windows moeten minstens één maximaal
-bericht (payload + 64 bytes) kunnen dragen en niet boven de queuecapaciteit komen.
-FIFO 8192–262144 samples per kanaal, totale allocatie vooraf overflow-checken.
-Service accepteert sample-rate 8–192 kHz en maximaal acht kanalen. Alle timeouts
-1–120 seconden, pinginterval 5–60 seconden. Geen timing-timeout voor bewust
-gepauzeerde data of wachten op credit; heartbeat bewaakt de verbinding.
+Hard ranges: sessions 1–32 and codec_threads 1–4. Message limits may decrease but
+never exceed protocol maxima. Windows must hold at least one maximum message
+(payload + 64) and stay within queue capacity. Current code additionally reserves
+capacity for an extra owned packet. FIFO is 8192–262144 samples per channel;
+check total allocation for overflow. Audio range is 8–192 kHz, at most eight
+channels. Timeouts are 1–120 seconds; ping interval is 5–60 seconds. Do not timeout
+intentional data pause or credit wait; heartbeat monitors connection health.
 
-Debug uit: geen logfile openen of logmap vereisen. Alleen minimale gesaniteerde
-startup-/fatalmelding naar stderr. Debug aan: JSONL-events naar logfile, roteren
-op grootte; geen dump van willekeurige FFmpeg-logstrings, userinput of packets.
-Events: random tijdelijke sessie-ID, codec/profiel, effectieve sampleformaten,
-tellingen, CPU-/walltime, queue-high-watermarks, foutcode en lifecycle. Geen IP's
-nodig in het bestand. Samenvattingen maximaal eenmaal per seconde, geen regel
-per audiopakket. Schrijffout stopt filelogging en meldt één waarschuwing op stderr;
-audio blijft werken. Logqueue begrenzen en dropped-log-count bijhouden.
+With debug off, never open a logfile or require a log directory. Emit only minimal
+sanitized startup/fatal stderr messages. With debug on, write rotated JSONL events,
+not arbitrary FFmpeg log strings, user input or packet dumps. Evidence targets:
+random temporary session ID, codec/profile, effective formats, counts, CPU/wall
+time, queue high-water marks, error code and lifecycle. IP addresses are not
+needed. Summaries at most once per second, no per-packet logging. A write failure
+disables file logging and produces one stderr warning without stopping audio.
+Bound the log queue and count dropped events. Current CPU/RSS measurement gaps
+are documented in status; wall time is not CPU time.
 
-PCM-FIFO en wirequeues zijn begrensd, maar libavcodec kan intern extra geheugen
-alloceren. Rapporteer RSS; presenteer queuecaps niet als harde totale RSS-garantie.
-Voorgestelde Docker-memorylimiet 512 MiB voor vier sessies, na meting afstellen.
+PCM/wire queues are bounded, but libavcodec may allocate internal memory. Measure
+RSS; queue caps are not a hard total-RSS guarantee. A proposed Docker memory limit
+is 512 MiB for four sessions, subject to measurements.
 
-## 9. Docker en standalone bouw
+## 9. Docker and standalone builds
 
-- Multistage Linuxbuild. Runtime bevat service, noodzakelijke gedeelde libraries,
-  dependency notices en versie/buildmanifest; geen compiler, Python of FFmpeg-cli.
-- Native `linux/amd64` en `linux/arm64`, geen emulatie in productie. Test arm64
-  daadwerkelijk op ODROID; een QEMU-build is geen performancebewijs.
-- Pin basisimage-digest en alle sourceversions in manifest. Begin met dezelfde
-  gevalideerde FFmpeg-bronrevision als app, maar servicebuild haalt die zelfstandig
-  op uit upstream; niet relatief linken naar app-Vendor. Geen appvendormutatie.
-- Minimale FFmpeg-config: disable-everything/autodetect/programs/docs/network/
-  avdevice/avfilter/postproc; enable avcodec/avutil en noodzakelijke helpers,
-  decoders dca/truehd/mlp, encoder flac, benodigde parsers indien tests dat aantonen.
-  Voer registry/symbolcheck uit; daadwerkelijke configuratie is testbaar bewijs,
-  een lijst flags in documentatie is dat niet.
-- Gebruik dynamische LGPL-libraries en houd GPL/nonfree-componenten uit deze
-  build. Publiceer bij distributie passende exacte bronnen/buildinstructies en
-  notices. Dit ontwerp doet geen uitspraak over specifieke codecpatenten.
-- UID/GID zonder root, read_only, cap_drop ALL, no-new-privileges, geen privileged,
-  geen Docker-socket, geen host-network nodig. Eén TCP-poort publiceren.
-- Alleen settingsfile en optionele `/logs` mount. Geen tmpfs nodig voor media;
-  eventuele runtime-tmpfs expliciet klein en niet als audio-spool gebruiken.
-- Dockerrestart `unless-stopped`. Healthcheck via eigen `--healthcheck`-modus;
-  geen curl toevoegen uitsluitend voor health. Health is liveness, capaciteit
-  vol is niet automatisch unhealthy.
-- SIGTERM: acceptor dicht, actieve sessies `server_shutdown`, maximaal 10 seconden
-  nette afbouw, resources vrijgeven. Docker stop_grace_period 15 seconden.
+- Multistage Linux build. Runtime contains the service, required shared libraries,
+  notices and version/build manifest, not compilers, Python or FFmpeg CLI.
+- Native linux/amd64 and linux/arm64; no production emulation. Test arm64 on the
+  ODROID itself. A QEMU build is not performance proof.
+- Pin base-image digest and dependency source versions/hashes. Start with the
+  app's validated FFmpeg revision, fetched independently from upstream rather
+  than linked to app Vendor. Do not mutate the app's vendor build.
+- Minimal FFmpeg configuration disables everything/autodetect/programs/docs/
+  network/avdevice/avfilter/postproc; enable avcodec/avutil, needed helpers,
+  dca/truehd/mlp decoders, flac encoder and only parsers proven necessary. Inspect
+  the actual registry/symbols; configure flags in docs alone are not evidence.
+- Dynamically link LGPL libraries, excluding GPL/nonfree components. Distribute
+  matching exact sources/build instructions/notices when publishing binaries.
+  This design makes no codec-patent determination.
+- Non-root UID/GID, read-only root, cap_drop ALL, no-new-privileges, no privileged
+  mode, Docker socket or host network. Publish one TCP port.
+- Only settings and optional logs mounts. No media tmpfs is needed. Any runtime
+  tmpfs must be explicitly small and must never act as audio spool.
+- Restart unless-stopped. Use the service's `--healthcheck`; do not add curl just
+  for health. Health is liveness; exhausted session capacity is not unhealthy.
+- On SIGTERM, close the acceptor, report server_shutdown to active sessions,
+  allow at most ten seconds of cleanup and free resources. Docker grace is 15 seconds.
 
-Geplande standalone verificatie-entrypoint:
+The root Dockge Compose file uses a local checkout and image build, with read-only
+settings and `pull_policy: never`. Build explicitly before first deployment. The
+settings bind uses `create_host_path: false` so a missing file fails safely.
+Dockge setup is in DEPLOYMENT.md. Do not install Docker on the development Mac.
+
+Standalone verification entrypoint:
 `python3 scripts/run_checks.py --all --scratch <absolute-path>`.
-Python is alleen build/testgereedschap. Testscript draait unit/protocol/codec/
-containerchecks; bij ontbrekende Docker of fixture meldt het incomplete en faalt
-de volledige releasecheck. Geen groene status op overgeslagen verplichte tests.
+Python is build/test tooling only. Run unit/protocol/codec/container checks. Missing
+Docker or fixtures are incomplete and fail full release verification; do not mark
+skipped mandatory checks green. Current runner limitations/acceptance remain explicit.
 
-## 10. Test- en acceptatiematrix
+## 10. Test and acceptance matrix
 
-| ID | Vereist bewijs |
+| ID | Required evidence |
 | --- | --- |
-| SVC-01 | Zelfstandige amd64/arm64-build; registry/versie/provenance; runtime zonder mediavolumes, met read-only root en zonder beschrijfbare logmap als debug uit staat. |
-| SVC-02 | Wire golden vectors, lengte-/overflow-/NaN/duplicate-key-rejects, state machine, onbekende versie/codec, ongeldige side data, credits en races. |
-| SVC-03 | DTS core, DTS-HD MA, TrueHD, MLP: volledige decode naar referentie-PCM versus teruggedecodeerde FLAC; gelijke samples/layout/rate/precisie en geen HD-core-only-fallback. |
-| SVC-04 | Decoder/encoder EAGAIN, EOF-tail, ontbrekende PTS na anker, onbruikbaar eerste anker, skip_samples/priming, negatieve tijden, discontinue tijd en midstream formatwijziging. |
-| SVC-05 | Trage reader/writer, nulcredit, volle queues, lange pauze, halfopen socket, cancel/seek/trackwissel/EOF/shutdown, maxsessies en resourceherstel. |
-| APP-01 | Alleen Standard tvOS toont drie velden; Save/Discard/defaults/IPv6; Full en disabled-route gelijk aan baseline. |
-| APP-02 | Originele track-ID en taal behouden; routeprecedentie; server-fallbackbeleid; geen AAC-/downmix-/stille fallback; availability en generatie-invalidatie. |
-| APP-03 | Preheaderbuffer begrensd; FLAC-extradata→fMP4→werkelijk AVPlayerItem met juiste codec/rate/kanalen; geen dubbele packets/bias. |
-| APP-04 | Stop/cancel bij ieder await, pending seek vervangen, oude sessieresultaten genegeerd, audiowissel rollback, paused trackwissel, EOF en herstart. |
-| APP-05 | Back-upformaat 6 roundtrip; legacy 1–5 blijven geldig, nieuwe default uit; corrupte velden geweigerd, geen secrets, geen DB-schemawijziging of nieuwe sync. |
-| HW-01 | Eén sessie op DS923+ én ODROID: representative zware 7.1/24-bit DTS-HD MA en TrueHD, 48/96/192 kHz voor zover codec/bron dat ondersteunt. |
-| HW-02 | Zelfde materiaal twee/vier sessies; throughput, RSS, CPU, thermisch gedrag, queueverloop en degradatie. Meer sessies mogen de praktische hardwaregrens zijn. |
-| ATV-01 | Diagnose op fysieke Apple TV: hoorbaar juiste kanaalrouting, lipsync en behoud van bestaande video/DV/HDR-route. Host-componentpass bewijst dit niet. |
+| SVC-01 | Independent amd64/arm64 build, registry/version/provenance; no media mounts, read-only runtime, debug off without a writable logs directory. |
+| SVC-02 | Wire golden vectors, length/overflow/NaN/duplicate-key rejection, state machine, unknown version/codec, invalid side data, credits and races. |
+| SVC-03 | DTS core, DTS-HD MA, TrueHD, MLP: full reference decode compared with decoded FLAC, equal samples/layout/rate/precision and no HD-to-core-only fallback. |
+| SVC-04 | Decoder/encoder EAGAIN, EOF tail, missing PTS after anchor, unusable first anchor, skip samples/priming, negative time, discontinuities and midstream format changes. |
+| SVC-05 | Slow reader/writer, no credit, full queues, long pause, half-open socket, cancel/seek/track switch/EOF/shutdown, capacity and resource recovery. |
+| APP-01 | Only Standard tvOS exposes three fields; Save/Discard/defaults/IPv6; Full and disabled match baseline. |
+| APP-02 | Original track ID/language retained, route precedence, server fallback, no AAC/downmix/silent fallback, availability and generation invalidation. |
+| APP-03 | Bounded preheader, FLAC extradata through fMP4 into actual AVPlayerItem with correct codec/rate/channels, no duplicate packets/bias. |
+| APP-04 | Stop/cancel at every await, superseded pending seeks, ignored old results, track-change rollback, paused track switch, EOF and restart. |
+| APP-05 | Backup 6 roundtrip, valid legacy 1–5 with disabled default, corrupt-field rejection, no secrets, DB migration or new sync. |
+| HW-01 | One session on DS923+ and ODROID with representative demanding 7.1/24-bit DTS-HD MA/TrueHD, 48/96/192 kHz where supported by codec/source. |
+| HW-02 | Same material at two/four sessions: throughput, RSS, CPU, thermals, queues and degradation. Higher concurrency may be the hardware limit. |
+| ATV-01 | Diagnose on physical Apple TV: correct audible channel routing, lip sync and existing video/DV/HDR behavior. Host success is not proof. |
 
-Referentie-PCM vergelijken na dezelfde geldige decodertrims, met canonical integer
-packing en expliciete channel order. Voor lossy DTS betekent gelijkheid aan
-gedecodeerde referentie, niet aan een onbeschikbare originele studiobron.
-Codec-unsupported rate/layout expliciet buiten de ondersteunde matrix melden;
-geen lager sampleformaat kiezen om een test groen te krijgen.
+Compare reference PCM after identical valid decoder trims, with canonical integer
+packing and explicit channel order. Lossy DTS equality means equality to decoded
+reference, not an unavailable original studio source. Explicitly exclude
+unsupported rate/layout combinations; do not lower precision just to pass a test.
 
-Performanceprocedure per hardware: noteer OS/kernel, arch, RAM, Dockerlimieten,
-buildhash, throttling/temperatuur en achtergrondbelasting. Eerst ongepacete
-conversiesnelheid meten, daarna 60 minuten end-to-end realtime met pauze, tien
-verspreide seeks en tien trackwissels. Streefwaarde single-session throughput
-minimaal 2x realtime; harde eis is duurzaam foutloze realtimeweergave met begrensd
-geheugen op beide apparaten. 2x is reserve en wordt apart gerapporteerd.
-CS-bufferstreefwaarde 3–5 seconden; extra netwerk/conversiestart streefwaarde
-hoogstens 2 seconden op bedraad LAN, totale mediastart apart meten. Lipsync:
-geen hoorbare drift, met meetbare AV-offset waar bron dat toelaat; gewenst binnen
-40 ms en geen oplopende trend. Targets zijn nog niet gemeten resultaten.
+Per-device performance procedure: record OS/kernel, architecture, RAM, Docker
+limits, build hash, throttling/temperature and background load. Measure unpaced
+conversion, then 60 minutes of end-to-end realtime with pause, ten distributed
+seeks and ten track changes. Single-session target is at least 2x realtime; the
+hard requirement is sustained error-free realtime with bounded memory on both
+devices. Report 2x headroom separately. CS buffer target is 3–5 seconds; additional
+network/conversion startup target is at most two seconds on wired LAN, with total
+startup measured separately. Lip sync: no audible drift, measurable AV offset
+where source allows, preferably within 40 ms with no increasing trend. Targets
+are not measured results.
 
-## 11. Diagnose-contract
+## 11. Diagnose contract
 
-Voeg source-gated test `external_audio_decode.v1` toe aan bestaande Diagnose.
-Varianten `external.flac.dts.v1`, `external.flac.truehd.v1`,
-`external.flac.mlp.v1`. Criteria:
+Add source-gated test `external_audio_decode.v1` to existing Diagnose, with variants
+`external.flac.dts.v1`, `external.flac.truehd.v1` and `external.flac.mlp.v1`.
+Required stable criteria:
 
 - `external_audio.protocol.v1`
 - `external_audio.format_preservation.v1`
 - `external_audio.timeline.v1`
 - `external_audio.throughput.v1`
 - `external_audio.cleanup.v1`
-- `external_audio.rendering.v1` (human judgement required)
+- `external_audio.rendering.v1` (human judgment required)
 
-Evidence: desired/applied endpointconfig (gesaniteerd, geen privéhost nodig in
-deelbaar rapport), service/protocol/FFmpeg-revision, bronprofiel, format/layout,
-tellingen, hashes van canonical PCM voor hostfixtures, timingreeksen, queues,
-ontbrekende/truncated coverage en cleanupresultaat. Geen packets, FLAC-blokken,
-PCM, playlists/init/segments in rapporten. Bewaar evidence vóór player teardown.
-Werk Swift-reportcontract, JSON-schema, validator, Diagnose-UI en analysehandleiding
-samen bij. Bestaande schemaversie niet onzichtbaar incompatibel wijzigen.
+Evidence includes desired/applied endpoint settings, sanitized without a private
+hostname in shareable reports; service/protocol/FFmpeg revision; source profile;
+format/layout; counts; canonical PCM hashes for host fixtures; timing series;
+queues; explicit missing/truncated coverage and cleanup result. Never include
+packets, FLAC blocks, PCM, playlists, init files or segments in reports. Preserve
+evidence before player teardown. Update Swift report contract, JSON schema,
+validator, Diagnose UI and analysis guide together. Do not silently change an
+existing schema version incompatibly.
 
-## 12. Uitvoeringsfasen en stopcriteria
+## 12. Implementation phases and stop criteria
 
-Werk sequentieel; houd de statusmatrix bij. Geen brede refactors of parallelle
-agents zonder expliciete opdracht. Elke fase eindigt met bewijs en resterende
-onzekerheid, niet met alleen compilatie.
+Work sequentially and maintain the matrix. No broad refactors or parallel agents
+without an explicit request. Each phase ends with evidence and remaining
+uncertainty, not compilation alone.
 
-**Fase 0 — inventarisatie.** Lees AGENTS, deze documenten, actuele brug/timing/
-settings/back-up en Diagnosecontracten. Leg baselineversies/werkomvang vast zonder
-geheimen of buildoutputs. Controleer werkelijke codec/layout-extradata-eigenschappen.
+**Phase 0 — inventory.** Read current instructions, these documents, bridge/timing,
+settings/backup and Diagnose contracts. Record versions and worktree scope without
+secrets/build outputs. Inspect actual codec/layout/extradata properties.
 
-**Fase 1 — protocol en pure servicecore.** CMake, dependency pinning, config,
-wire/golden vectors, bounded queues, state machine, standalone codecfixtures.
-Bewijs SVC-02/03/04 vóór netwerk of appinterface. Geen successtub.
+**Phase 1 — protocol and core.** CMake, pins, settings, golden vectors, bounded
+queues, state machine and standalone codec fixtures. Prove SVC-02/03/04 before
+accepting networking or app integration. No success stub.
 
-**Fase 2 — service en containers.** Beast transport, credits/heartbeat/cleanup,
-logging/rotation, beide native images, standalone checks SVC-01/05. Buildcontext
-uitsluitend deze folder. Maak deploymenthandleiding voor Synology/ODROID.
+**Phase 2 — service and containers.** Beast transport, credits, heartbeat, cleanup,
+rotated logging, both native images and independent SVC-01/05 checks. Build context
+is only this repository. Provide Synology/ODROID deployment instructions. Preparing
+independent host/container work does not bypass missing phase-1 acceptance.
 
-**Fase 3 — Diagnose-integratie, vroeg haalbaarheidsbewijs.** Native FLAC-preheader,
-transport en muxaansluiting in herbruikbare componenten; toegang eerst source-gated
-in Diagnose. Behoud productiegedrag. Fysieke codec/layout/timing- en single-session
-performance op beide apparaten vaststellen. Als hardware/toegang ontbreekt, meld
-welke tests onuitgevoerd zijn; geen performancegoedkeuring claimen. Als één sessie
-de eis niet haalt, optimaliseer binnen scope, of leg concrete beperking ter besluit
-voor. Niet compenseren met downmix/AAC/schijfspool.
+**Phase 3 — Diagnose feasibility.** Reusable native FLAC preheader, transport and
+mux integration, initially source-gated in Diagnose with production unchanged.
+Establish physical format/layout/timing and single-session performance on both
+devices. Report missing access/tests without claiming approval. If one session
+fails the requirement, optimize within scope or present the concrete limit for a
+decision. Do not compensate with downmix, AAC or disk spool.
 
-**Fase 4 — Standard productie-integratie.** Pas na bewezen fase 3: routepolicy,
-drie instellingen, availability, lifecycles/fallbacks, HLS-codecmetadata en
-configuratie-export 6. Zelfde transport/native component, geen Diagnosefork.
-Specifieke geautoriseerde externe route; oude ALAC/Full-paden behouden.
+**Phase 4 — Standard production integration.** Only after phase 3 passes: route
+policy, three settings, availability, lifecycle/fallback, HLS metadata and backup
+format 6, using the same components and preserving ALAC/Full.
 
-**Fase 5 — afronding.** APP-01 t/m 05, performanceconcurrentie, lange fysieke
-acceptatie, documentatie en onafhankelijke servicebuild uit gekopieerde folder.
-Voer volledige tvOS-verificatie uit:
+**Phase 5 — final acceptance.** APP-01 through APP-05, concurrent performance,
+long physical acceptance, docs and an independent build outside the app folder.
+For app changes run full tvOS verification with the toolchain selected in the
+actual command environment:
 
-```text
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-python3 Tests/run_checks.py --all --app --scratch <absolute-resolved-path>
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer python3 Tests/run_checks.py --all --app --scratch /absolute/resolved/scratch/path
 ```
 
-Selecteer die toolchain daadwerkelijk in de commandomgeving. Bouw/test Standard
-ook expliciet met actuele schemanaam; de algemene `--app`-check bewijst niet
-vanzelf de distributievariant. Behoud codec-exclusiecheck. Full-regressies mogen
-de bestaande lokale checks gebruiken; geen iPad-gate. Verander nooit de verplichte
-appcheck om een service-/Standard-fout te maskeren.
+Build/test Standard separately with its current scheme; the generic --app check
+does not itself establish distribution-variant acceptance. Preserve codec
+exclusions. Full regressions can use existing local checks, never an iPad gate.
+Never weaken mandatory app verification to conceal a service/Standard failure.
 
-Nu geen commit/push/versiebump. Later: service eigen versie/tag/changelog; een
-appcommit volgt root-AGENTS met gezamenlijke patch/buildmetadata, top-README en
-volledige definitieve verificatie. GitHub Verify blijft uit, geen workflowdispatch.
+Private service commits/pushes are authorized by the subsequent user request.
+Use independent service versions/changelog. App commits still require root app
+release policy, shared patch/build metadata, top README and full final verification.
+No public release, image publication, device installation or workflow dispatch
+is inferred. GitHub Verify remains disabled.
 
-## 13. Technische referenties
+## 13. Technical references
 
-De onderstaande bronnen onderbouwen APIkeuzes, niet de onbewezen performance:
+These references support API choices, not unmeasured performance:
 
-- [FFmpeg send/receive-contract](https://ffmpeg.org/doxygen/7.1/group__lavc__encdec.html)
-  en [decoderbufferpadding](https://www.ffmpeg.org/doxygen/7.1/group__lavc__decoding.html).
-  Gebruik bij bouw de headers en documentatie van de werkelijk gepinde versie.
+- [FFmpeg send/receive contract](https://ffmpeg.org/doxygen/7.1/group__lavc__encdec.html)
+  and [decoder padding](https://www.ffmpeg.org/doxygen/7.1/group__lavc__decoding.html).
+  Build against the actual pinned revision's headers/documentation.
 - [Boost.Beast WebSocket](https://www.boost.org/latest/libs/beast/doc/html/beast/using_websocket.html):
-  bestaande RFC6455-implementatie, geen zelfgeschreven handshake/framing.
-- [Apple URLSessionWebSocketTask](https://developer.apple.com/documentation/foundation/urlsessionwebsockettask):
-  native apptransport.
+  use an existing RFC6455 implementation, not a handwritten handshake/framing layer.
+- [Apple URLSessionWebSocketTask](https://developer.apple.com/documentation/foundation/urlsessionwebsockettask).
 - [Apple HLS authoring](https://developer.apple.com/streaming/hls-authoring-specification-for-apple-devices.html):
-  FLAC in fMP4; echte player-itemvalidatie blijft vereist.
-- [FFmpeg-licentievoorwaarden](https://ffmpeg.org/legal.html): kies passende
-  dependencycompliance, zonder een ononderzochte patentblokkade te veronderstellen.
+  FLAC in fMP4 still requires actual player-item validation.
+- [FFmpeg licensing](https://ffmpeg.org/legal.html): provide dependency compliance
+  without inventing an unexamined codec-patent blocker.
