@@ -1,9 +1,29 @@
 # Implementation status
 
-Updated: 2026-11-01; host diagnostic snapshot 0.1.3; ODROID deployed 0.1.2. **Partially implemented; full acceptance is not established.**
-The standalone native service converts tested codec packets into FLAC. CinemaSeat
-external-audio integration is not implemented. No production route, settings or
-backup export has changed. This is a private development source repository.
+Updated: 2026-11-02; diagnostic snapshot 0.1.4; ODROID deployed 0.1.4. **Partially implemented; full acceptance is not established.**
+The standalone service converts tested DTS/TrueHD/MLP into FLAC. Production
+CinemaSeat integration remains disabled. A separate Diagnose-only Swift client,
+native preheader/mux bridge and source-gated trials are now implemented in the
+app workspace, with bounded report/schema/validator/UI evidence. Physical
+Aladdin TrueHD 7.1 initial/two-minute trials passed; the user confirmed picture,
+sound and lip sync. That observation does not cover the failed resume/seek and
+track-roundtrip lifecycle cases. New Diagnose cover/telemetry corrections await
+a fresh physical lifecycle report.
+
+| Current gate | Status |
+| --- | --- |
+| Service / transport | Native arm64 macOS regressions and Linux ODROID read-only runtime/PCM/failure checks pass. Full adversarial and two-architecture acceptance remain open. |
+| ODROID | Authorized 0.1.4 deployed; settings unchanged, eight post-update PCM checks and Swift EOF/error-context check pass. See [update evidence](evidence/ODROID_2026-11-02.md). |
+| Diagnose initial playback | Implemented separately; physical TrueHD 7.1 initial/two-minute picture, sound and lip sync accepted by the user. |
+| Diagnose lifecycle | Pause/resume passed technically; nonzero resume/seek still reject the strict timeline. Track cover handshake fixed in Diagnose; new physical results pending. |
+| Production app | No external-audio production route enabled; Standard codec restrictions unchanged. |
+| Full acceptance | Open: complete original-timestamp DTS-HD MA equivalence, sustained heavy-source endurance/thermals, NAS/amd64 and physical lifecycle controls. |
+
+## Historical planning snapshot — 2026-11-01
+
+The phase/matrix/planning sections below preserve the earlier baseline and its
+then-missing integration. Their historical "not implemented" statements do not
+override the current gate summary above. Later dated evidence remains separate.
 
 ## Phases and gates
 
@@ -105,3 +125,11 @@ that rejection and explicitly reports missing leading coverage and no source or
 physical acceptance. See [source evidence](evidence/DTSHD_7_1_2026-11-01.json).
 This does not meet SVC-03 or authorize a runtime recovery/trim policy. A real
 TrueHD 7.1 source, complete DTS-HD service pass and physical acceptance remain open.
+
+## Timeline diagnostics update — 2026-11-02
+
+Version 0.1.4 adds failure-only structured timeline context. It preserves the
+existing strict acceptance decision; the packet is explicitly the most recent
+submit, not guaranteed ownership of the decoded frame. The approved ODROID native arm64 deployment and short component checks pass;
+see [the update record](evidence/ODROID_2026-11-02.md). Physical lifecycle and
+full endurance/other architecture acceptance remain open.

@@ -32,6 +32,7 @@ struct Session : std::enable_shared_from_this<Session> {
     beast::flat_buffer read_buffer;
     http::request_parser<http::empty_body> request;
     net::steady_timer timer;
+    net::steady_timer error_flush_timer;
     BoundedQueue<Work> inputs;
     std::atomic<bool> cancelled{false};
     std::atomic<bool> working{false}, formatted{false}, waiting_output{false};
@@ -48,7 +49,7 @@ struct Session : std::enable_shared_from_this<Session> {
     uint64_t input_limit;
     Credit output_credit;
     bool slot = false, upgraded = false, started = false, activated = false, eof = false, closing = false, close_started = false;
-    bool pinging = false, awaiting_pong = false;
+    bool pinging = false, awaiting_pong = false, flush_error = false;
     ws::close_code close_code = ws::close_code::normal;
     Clock::time_point opened = Clock::now(), ping_at = opened, pong_due{}, stage_started = opened, write_started = opened;
     std::string id = boost::uuids::to_string(boost::uuids::random_generator()());
@@ -64,7 +65,7 @@ struct Session : std::enable_shared_from_this<Session> {
     void credit(uint64_t bytes);
     void enqueue(Message value);
     void pump();
-    void fail(const std::string& code);
+    void fail(const std::string& code, const Json& evidence = Json::object());
     void stop();
     void tick();
     void close_after_write();
@@ -137,7 +138,7 @@ struct Server {
     }
 };
 Session::Session(Server& o, tcp::socket s, const Config& c)
-    : owner(o), config(c), socket(std::move(s)), timer(socket.get_executor()),
+    : owner(o), config(c), socket(std::move(s)), timer(socket.get_executor()), error_flush_timer(socket.get_executor()),
       inputs(c.get("limits", "queued_input_bytes")), input_limit(c.get("limits", "input_window_bytes")) {
     request.header_limit(16384); request.body_limit(0);
 }
@@ -263,8 +264,8 @@ void Session::run_codec(Json start) {
             progress_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now().time_since_epoch()).count();
         }
     } catch (const Failure& error) {
-        std::string code = error.what();
-        net::post(socket.get_executor(), [self = shared_from_this(), code] { if (!self->cancelled) self->fail(code); });
+        std::string code = error.what();Json evidence=error.evidence;
+        net::post(socket.get_executor(), [self = shared_from_this(), code, evidence] { if (!self->cancelled) self->fail(code,evidence); });
     } catch (const Json::exception&) {
         net::post(socket.get_executor(), [self = shared_from_this()] { self->fail("protocol_error"); });
     } catch (...) {
@@ -330,15 +331,17 @@ void Session::pump() {
         self->pump();
     });
 }
-void Session::fail(const std::string& code) {
+void Session::fail(const std::string& code, const Json& evidence) {
     if (cancelled.exchange(true)) return;
     owner.logger.event({{"event", "session_error"}, {"session_id", id}, {"code", code}});
-    inputs.cancel(); space.notify_all(); closing = true;
+    inputs.cancel(); space.notify_all(); closing = true; flush_error = true;
     close_code = code == "protocol_error" || code == "invalid_packet" || code == "unsupported_version" ? ws::close_code::protocol_error : code == "limit_exceeded" ? ws::close_code::too_big : ws::close_code::internal_error;
     { std::lock_guard lock(mutex); outputs.clear(); controls.clear(); pending_credit.reset(); }
     if (!upgraded) return stop();
-    control({{"type", "error"}, {"generation", std::to_string(generation)}, {"code", code},
-             {"retryable", false}, {"message", "Audio conversion could not continue."}});
+    Json message={{"type", "error"}, {"generation", std::to_string(generation)}, {"code", code},
+             {"retryable", false}, {"message", "Audio conversion could not continue."}};
+    if(code=="timeline_discontinuity"&&!evidence.empty())message["timeline"]=evidence;
+    control(message);
     timer.expires_after(std::chrono::seconds(config.get("timeouts", "close_seconds")));
     timer.async_wait([self = shared_from_this()](auto e) { if (!e) self->stop(); });
     pump();
@@ -347,11 +350,21 @@ void Session::close_after_write() {
     if (close_started) return;
     close_started = true;
     if (!socket.is_open()) return stop();
-    socket.async_close(close_code, [self = shared_from_this()](auto) { self->stop(); });
+    auto close = [self=shared_from_this()] {
+        if (!self->socket.is_open()) return self->stop();
+        self->socket.async_close(self->close_code,[self](auto){self->stop();});
+    };
+    if (flush_error) {
+        // Let URLSession consume the completed application error write before
+        // its close callback can overtake delivery. The existing close deadline
+        // remains authoritative; peer cancellation still tears down immediately.
+        error_flush_timer.expires_after(std::chrono::milliseconds(100));
+        error_flush_timer.async_wait([close](auto error){if(!error)close();});
+    } else close();
 }
 void Session::stop() {
     cancelled = true; closing = true; inputs.cancel(); space.notify_all();
-    beast::error_code error; timer.cancel();
+    beast::error_code error; timer.cancel(); error_flush_timer.cancel();
     beast::get_lowest_layer(socket).socket().cancel(error);
     beast::get_lowest_layer(socket).socket().shutdown(tcp::socket::shutdown_both, error);
     beast::get_lowest_layer(socket).socket().close(error);

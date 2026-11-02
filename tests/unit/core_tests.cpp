@@ -211,7 +211,13 @@ static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, c
     bool failed = false;
     for (auto p : input) {
         if (p.sequence > input.size() / 2) { p.pts += rate; p.flags |= 1; }
-        try { discontinuity.submit(p); } catch (const Failure& e) { test(e.what() == std::string("timeline_discontinuity")); failed = true; break; }
+        try { discontinuity.submit(p); } catch (const Failure& e) { test(e.what() == std::string("timeline_discontinuity"));
+            const auto& d=e.evidence;test(d.at("contract")=="external_audio.timeline_failure.v1");
+            test(std::abs(static_cast<long double>(decimal<int64_t>(d.at("observed_pts")))-decimal<int64_t>(d.at("expected_pts")))>decimal<int64_t>(d.at("tolerance_samples")));
+            test(d.at("input").at("sequence")==std::to_string(p.sequence));test(d.at("input").at("payload_bytes")==p.payload.size());
+            test(d.at("input").at("payload_sha256").get<std::string>().size()==64&&d.dump().size()<4096);
+            test(d.at("packet_binding")=="most-recent-submit"&&d.at("time_base_den")==rate);
+            failed = true; break; }
     }
     test(failed);
     CodecPipeline missing(start, 1, 65536, [](auto) {}, [](auto) {});

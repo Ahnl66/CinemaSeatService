@@ -11,7 +11,9 @@
 namespace csad {
 using Json = nlohmann::json;
 struct Failure : std::runtime_error {
+    Json evidence = Json::object();
     explicit Failure(std::string code) : std::runtime_error(std::move(code)) {}
+    Failure(std::string code, Json details) : std::runtime_error(std::move(code)), evidence(std::move(details)) {}
 };
 inline void require(bool condition, const char* code = "protocol_error") {
     if (!condition) throw Failure(code);

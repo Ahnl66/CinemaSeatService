@@ -50,7 +50,7 @@ one session generation. Heartbeat operates in every non-closed state.
 ```json
 {
   "type":"hello", "protocol":1,
-  "session_id":"random-uuid", "service_version":"0.1.3",
+  "session_id":"random-uuid", "service_version":"0.1.4",
   "limits":{"packet_payload_bytes":1048576,"control_message_bytes":65536},
   "input_limit_bytes":"4194304"
 }
@@ -307,3 +307,36 @@ session and consumes no conversion slot.
 
 Protocol major v1 changes only through an explicit version bump. Service SemVer
 and app version can advance independently while wire compatibility is retained.
+
+## Optional timeline failure context (0.1.4 candidate)
+
+An `error` with code `timeline_discontinuity` may additionally contain `timeline`,
+contract `external_audio.timeline_failure.v1`. Legacy clients may ignore it;
+absence is explicitly unavailable evidence, not a different error or an accepted
+source. Existing error codes, close deadline and timestamp tolerance remain unchanged.
+
+The closed, bounded object contains signed decimal `first_pts`, `expected_pts`,
+`observed_pts`, `frame_timestamp`; unsigned decimal `tolerance_samples`,
+`accepted_samples`, `decoded_frame_index`, `input_packets`; numeric `sample_rate`,
+`time_base_num`, `time_base_den`, `frame_samples`; `timestamp_kind` (`pts` or
+`best_effort`); `packet_binding`; and `input`. Sample positions use 1/sample_rate;
+frame/input timestamps use the source timebase. Expected equals first plus
+accepted samples. Tolerance is the existing maximum of two samples and one
+rounded input tick; an error requires an absolute discrepancy above tolerance.
+
+`packet_binding=most-recent-submit` identifies the active submit call, not proven
+frame ownership (a decoder can delay output). Its `input` includes decimal
+`sequence`, nullable signed decimal `pts`/`dts`, decimal `duration`, numeric flags,
+`skip_start`, `skip_end`, `payload_bytes` and lowercase `payload_sha256`.
+`flush-without-packet` requires null input. A hash is computed only on failure;
+no payload is retained or exposed. The diagnostic object is below 4096 bytes.
+Clients must validate numeric bounds, timestamps/flags, unchanged tolerance,
+expected/accepted consistency, input/timebase/format binding and the exact
+contract before reporting details as provided. Invalid or unsupported optional
+details must not hide the primary remote failure code.
+
+After an application error write completes, version 0.1.4 waits at most 100 ms
+before initiating WebSocket close. This avoids URLSession close callbacks
+overtaking error delivery on fast native runtimes. The existing close timeout
+still bounds teardown, and peer cancellation/socket failure closes immediately.
+This does not delay normal cancellation or change timestamp/codec acceptance.

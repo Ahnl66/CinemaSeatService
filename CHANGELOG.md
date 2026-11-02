@@ -1,3 +1,15 @@
+# 0.1.4 — 2026-11-02 (diagnostic service update)
+
+- Bug fix: give a completed error frame a bounded 100 ms delivery window before
+  initiating WebSocket close, so fast URLSession close callbacks do not overtake
+  the failure details. Existing close deadline and immediate peer cleanup remain.
+- Functional enhancement: timeline rejection can include bounded numeric context,
+  the unchanged tolerance, decoded-frame count and most recent submitted packet
+  metadata/hash. Reports contain no compressed or decoded media.
+- Existing error codes, strict acceptance checks, channel policy and the
+  configured teardown deadline remain unchanged. The approved ODROID update
+  is verified; full hardware acceptance remains open.
+
 # 0.1.3 — 2026-11-01 (host diagnostic snapshot)
 
 - Bug fix: preserve source format hints and sanitized decoder-failure evidence

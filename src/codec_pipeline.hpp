@@ -22,6 +22,9 @@ class CodecPipeline {
     AVRational input_tb{};
     uint64_t generation, input_count = 0, output_count = 0, samples = 0, emitted_samples = 0;
     int64_t first_pts = 0, next_pts = 0, encoded_pts = 0;
+    uint64_t decoded_frames = 0;
+    const Packet* submitting = nullptr;
+    Json timeline_failure(AVFrame* frame, int64_t timestamp, int64_t observed, int64_t tolerance) const;
     std::optional<int64_t> priming_pts;
     int input_format = -1, input_precision = 0, fifo_cap;
     bool anchored = false, finished = false;

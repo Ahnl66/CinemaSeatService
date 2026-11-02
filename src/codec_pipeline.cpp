@@ -1,8 +1,10 @@
 #include "codec_pipeline.hpp"
 #include <cstring>
+#include <array>
 extern "C" {
 #include <libavutil/intreadwrite.h>
 #include <libavutil/opt.h>
+#include <libavutil/sha.h>
 }
 namespace csad {
 static void ok(int result, const char* code) { require(result >= 0, code); }
@@ -44,6 +46,8 @@ void CodecPipeline::submit(const Packet& p) {
     check_cancel(); require(!finished && p.generation == generation && p.sequence == input_count, "invalid_packet");
     require(!p.payload.empty() && p.payload.size() <= 1048576, "invalid_packet");
     require((p.flags & ~7) == 0 && p.duration >= 0, "invalid_packet");
+    submitting=&p;
+    struct Reset {const Packet*& value; ~Reset(){value=nullptr;}} reset{submitting};
     PacketPtr packet(av_packet_alloc()); require(bool(packet), "internal_error");
     ok(av_new_packet(packet.get(), p.payload.size()), "internal_error");
     std::memcpy(packet->data, p.payload.data(), p.payload.size());
@@ -122,7 +126,28 @@ void CodecPipeline::open_encoder(AVFrame* frame) {
         {"source_profile", profile}, {"object_metadata_preserved", false}};
     on_format(format);
 }
+Json CodecPipeline::timeline_failure(AVFrame* frame, int64_t timestamp, int64_t observed, int64_t tolerance) const {
+    Json input=nullptr;
+    if(submitting) {
+        const auto& p=*submitting;
+        std::array<uint8_t,32> digest{}; auto* hash=av_sha_alloc(); require(hash,"internal_error");
+        av_sha_init(hash,256); av_sha_update(hash,p.payload.data(),p.payload.size()); av_sha_final(hash,digest.data()); av_free(hash);
+        static const char hex[]="0123456789abcdef"; std::string encoded;encoded.reserve(64);
+        for(auto byte:digest){encoded+=hex[byte>>4];encoded+=hex[byte&15];}
+        input={{"sequence",std::to_string(p.sequence)},{"flags",p.flags},{"pts",p.flags&1?Json(std::to_string(p.pts)):Json(nullptr)},
+            {"dts",p.flags&2?Json(std::to_string(p.dts)):Json(nullptr)},{"duration",std::to_string(p.duration)},
+            {"skip_start",p.skip_start},{"skip_end",p.skip_end},{"payload_bytes",p.payload.size()},{"payload_sha256",encoded}};
+    }
+    return {{"contract","external_audio.timeline_failure.v1"},{"expected_pts",std::to_string(next_pts)},
+        {"first_pts",std::to_string(first_pts)},{"observed_pts",std::to_string(observed)},{"tolerance_samples",std::to_string(tolerance)},
+        {"accepted_samples",std::to_string(samples)},{"decoded_frame_index",std::to_string(decoded_frames-1)},
+        {"input_packets",std::to_string(input_count)},{"sample_rate",encoder->sample_rate},
+        {"time_base_num",input_tb.num},{"time_base_den",input_tb.den},{"frame_samples",frame->nb_samples},
+        {"frame_timestamp",std::to_string(timestamp)},{"timestamp_kind",frame->pts!=AV_NOPTS_VALUE?"pts":"best_effort"},
+        {"packet_binding",submitting?"most-recent-submit":"flush-without-packet"},{"input",input}};
+}
 void CodecPipeline::decoded(AVFrame* frame) {
+    decoded_frames=add(decoded_frames,1);
     require(frame->nb_samples > 0 && frame->nb_samples <= fifo_cap, "limit_exceeded");
     if (!encoder) open_encoder(frame);
     require(frame->sample_rate == encoder->sample_rate && frame->format == input_format && decoder->bits_per_raw_sample == input_precision && av_channel_layout_compare(&frame->ch_layout, &encoder->ch_layout) == 0, "format_changed");
@@ -135,7 +160,8 @@ void CodecPipeline::decoded(AVFrame* frame) {
         int64_t observed = av_rescale_q(timestamp, input_tb, encoder->time_base);
         int64_t tolerance = std::max<int64_t>(2, av_rescale_q(1, input_tb, encoder->time_base));
         // Use wide differences without signed overflow near timestamp limits.
-        require(std::abs(static_cast<long double>(observed) - next_pts) <= tolerance, "timeline_discontinuity");
+        if(std::abs(static_cast<long double>(observed) - next_pts)>tolerance)
+            throw Failure("timeline_discontinuity",timeline_failure(frame,timestamp,observed,tolerance));
     }
     require(next_pts <= INT64_MAX - frame->nb_samples, "limit_exceeded");
     FramePtr packed(av_frame_alloc()); require(bool(packed), "internal_error");

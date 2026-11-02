@@ -244,10 +244,12 @@ def run(binary, fixture_dir, scratch):
             peer = Peer(port)
             peer.send('{"type":"start","type":"cancel"}')
             assert peer.until('error')['code'] == 'protocol_error'
+            assert peer.until('closed')['type']=='closed'  # error must precede a completed close handshake
             peer.close()
             time.sleep(.1)
             peer = Peer(port)
             assert peer.until('error')['code'] == 'timeout'
+            assert peer.until('closed')['type']=='closed'  # error must precede a completed close handshake
             peer.close()
             time.sleep(.1)
             for codec in ['truehd', 'mlp', 'dts']:
@@ -255,6 +257,29 @@ def run(binary, fixture_dir, scratch):
                 transcode(port, fixture)
                 time.sleep(.05)
             fixture = json.loads((Path(fixture_dir) / 'dts.json').read_text())
+            # Failure-only telemetry must traverse the real WebSocket close path.
+            peer=Peer(port);peer.send(dict(fixture['start'],output_limit_bytes='16448'));peer.until('started')
+            for index,encoded in enumerate(fixture['packets'][:33]):
+                packet=bytearray(base64.b64decode(encoded))
+                if index==32:
+                    pts=struct.unpack_from('>q',packet,24)[0];struct.pack_into('>q',packet,24,pts+48000)
+                peer.send(bytes(packet))
+            received=0
+            for _ in range(1000):
+                failure=peer.receive()
+                if isinstance(failure,bytes):
+                    received+=len(failure);peer.send({'type':'credit','direction':'output','limit_bytes':str(received+16448)})
+                elif failure.get('type')=='error':break
+            else:raise AssertionError('timeline failure not delivered')
+            details=failure['timeline']
+            assert failure['code']=='timeline_discontinuity' and details['contract']=='external_audio.timeline_failure.v1'
+            assert int(details['expected_pts'])==int(details['first_pts'])+int(details['accepted_samples'])
+            assert abs(int(details['observed_pts'])-int(details['expected_pts']))>int(details['tolerance_samples'])
+            assert details['input']['sequence']=='32' and len(details['input']['payload_sha256'])==64
+            assert details['input']['payload_sha256']==hashlib.sha256(bytes(packet)[64:]).hexdigest()
+            assert len(json.dumps(details))<4096 and 'payload' not in details['input']
+            assert peer.until('closed')['type']=='closed'
+            peer.close();time.sleep(.05)
             # Reject out-of-range generations/sequences/reserved bits/length before decode.
             for offset in [8, 16, 60, 48]:
                 peer = Peer(port)
@@ -264,6 +289,7 @@ def run(binary, fixture_dir, scratch):
                 bad[offset] ^= 128
                 peer.send(bytes(bad))
                 assert peer.until('error')['code'] == 'invalid_packet'
+                assert peer.until('closed')['type']=='closed'  # error must precede a completed close handshake
                 peer.close()
                 time.sleep(.03)
             peer = Peer(port)
@@ -271,6 +297,7 @@ def run(binary, fixture_dir, scratch):
             peer.until('started')
             peer.send({'type': 'end_input', 'generation': '1', 'input_packets': '1'})
             assert peer.until('error')['code'] == 'protocol_error'
+            assert peer.until('closed')['type']=='closed'  # error must precede a completed close handshake
             peer.close()
             time.sleep(.03)
             # Concurrent independent sessions, not an estimate of hardware capacity.
@@ -304,6 +331,7 @@ def run(binary, fixture_dir, scratch):
             peer.until('started')
             process.terminate()
             assert peer.until('error')['code'] == 'server_shutdown'
+            assert peer.until('closed')['type']=='closed'  # error must precede a completed close handshake
             peer.close()
             assert process.wait(timeout=12) == 0
         finally:
