@@ -1,3 +1,11 @@
+# CinemaSeat Audio Decoder 0.1.5 — 2026-11-03
+
+Production DTS compatibility: the client negotiates the carrier from the decoded
+speaker layout. DTS 5.1(side) preserves its six speakers in FLAC 7.1 with silent
+back left/right; other supported DTS layouts retain their channel count and order.
+Sample values, precision, rate and timing are preserved. TrueHD/MLP behavior is
+unchanged. See `docs/PROTOCOL_V1.md` and `CHANGELOG.md`.
+
 # 0.1.4 — 2026-11-02 (diagnostic service update)
 
 - Bug fix: give a completed error frame a bounded 100 ms delivery window before

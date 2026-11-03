@@ -177,6 +177,16 @@ static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& pack
     test(avcodec_send_packet(dec.get(), nullptr) >= 0); receive(); return pcm;
 }
 static std::string export_dir;
+static std::vector<int32_t> padded_reference(const std::vector<int32_t>& source) {
+    test(!source.empty() && source.size() % 6 == 0);
+    std::vector<int32_t> expected; expected.reserve(source.size() / 6 * 8);
+    for (size_t i = 0; i < source.size(); i += 6) {
+        expected.insert(expected.end(), source.begin() + i, source.begin() + i + 4);
+        expected.push_back(0); expected.push_back(0);
+        expected.push_back(source[i+4]); expected.push_back(source[i+5]);
+    }
+    return expected;
+}
 static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, const std::string& variant = "base") {
     auto input = generate(id, channels, rate);
     if (variant == "negative") for (auto& p : input) { p.pts -= rate * 31; p.dts -= rate * 31; }
@@ -187,10 +197,40 @@ static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, c
         {"input", {{"codec", codec}, {"time_base", {{"num", 1}, {"den", rate}}}, {"extradata_base64", ""},
                    {"sample_rate_hint", nullptr}, {"bits_per_sample_hint", nullptr}, {"channel_order_hint", nullptr}}},
         {"output", {{"codec", "flac"}}}, {"timeline", {{"audible_from_us", "30000000"}}}, {"output_limit_bytes", "4194304"}};
+    const bool automatic = variant == "compatible";
+    const bool padded = variant == "side-padding" || (automatic && channels == 6);
+    if (automatic) start["output"]["layout_policy"] = "dts-native-or-side-7.1-v1";
+    if (padded && !automatic) {
+        test(id == AV_CODEC_ID_DTS && channels == 6);
+        start["output"]["layout_policy"] = "dts-side-5.1-to-7.1-silence-v1";
+        start["input"]["channel_order_hint"] = Json({"FL","FR","FC","LFE","SL","SR"});
+        for (const Json& bad : {Json("unknown-policy"), Json(true), Json(nullptr)}) {
+            auto invalid = start; invalid["output"]["layout_policy"] = bad;
+            rejects([&] {CodecPipeline rejected(invalid,1,65536,[](auto){},[](auto){});}, "unsupported_format");
+        }
+        for (const Json& bad : {Json({"FL","FR"}), Json({"FL","FR","FC","LFE","BL","BR"})}) {
+            auto invalid = start; invalid["input"]["channel_order_hint"] = bad;
+            rejects([&] {CodecPipeline rejected(invalid,1,65536,[](auto){},[](auto){});}, "unsupported_format");
+        }
+        auto wrong_codec = start; wrong_codec["input"]["codec"] = "truehd";
+        rejects([&] {CodecPipeline rejected(wrong_codec,1,65536,[](auto){},[](auto){});}, "unsupported_format");
+        CodecPipeline mismatch(start,1,65536,[](auto){},[](auto){});
+        auto stereo = generate(AV_CODEC_ID_DTS,2,rate);
+        rejects([&] {for(const auto& p:stereo)mismatch.submit(p);}, "unsupported_format");
+        auto unknown_hint=start;unknown_hint["input"]["channel_order_hint"]=nullptr;
+        CodecPipeline unknown_mismatch(unknown_hint,1,65536,[](auto){},[](auto){});
+        rejects([&] {for(const auto& p:stereo)unknown_mismatch.submit(p);}, "unsupported_format");
+        Json unknown_format;
+        CodecPipeline unknown_valid(unknown_hint,1,65536,[&](const Json& f){unknown_format=f;},[](auto){});
+        for(const auto& p:input)unknown_valid.submit(p);
+        unknown_valid.finish();test(unknown_format.at("source_channel_order")==start.at("input").at("channel_order_hint"));
+        reference = padded_reference(reference);
+    }
+    if (automatic && padded) reference = padded_reference(reference);
     if (!export_dir.empty()) {
         Json fixture{{"start", start}, {"packets", Json::array()}};
         for (const auto& packet : input) fixture["packets"].push_back(base64(serialize(packet)));
-        std::ofstream(export_dir + "/" + codec + (channels != 2 ? "-" + std::to_string(channels) + "ch" : variant != "base" ? "-" + variant : "") + ".json") << fixture.dump();
+        std::ofstream(export_dir + "/" + codec + (channels != 2 ? "-" + std::to_string(channels) + "ch" : "") + (variant != "base" ? "-" + variant : "") + ".json") << fixture.dump();
     }
     Json format; std::vector<Packet> output;
     CodecPipeline pipeline(start, 1, 65536, [&](const Json& f) { test(format.empty()); format = f; },
@@ -202,7 +242,9 @@ static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, c
     uint64_t samples = 0; int64_t next = decimal<int64_t>(end.at("first_pts"));
     for (const auto& p : output) { test(p.pts == next && p.duration > 0); next += p.duration; samples += p.duration; }
     test(samples == decimal<uint64_t>(end.at("total_samples")) && next == decimal<int64_t>(end.at("end_pts_exclusive")));
-    test(samples * channels == actual.size());
+    test(samples * (padded ? 8 : channels) == actual.size());
+    if (padded) test(format.at("layout_policy") == start.at("output").at("layout_policy") && format.at("source_channel_order") == Json({"FL","FR","FC","LFE","SL","SR"}) && format.at("silent_channels") == Json({"BL","BR"}) && format.at("channel_order") == Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}));
+    if (automatic && !padded) test(format.at("layout_policy") == "dts-native-or-side-7.1-v1" && format.at("source_channel_order") == format.at("channel_order") && format.at("silent_channels").empty());
     bool cancel = true;
     CodecPipeline cancelled(start, 1, 65536, [](auto) {}, [](auto) {}, [&] { return cancel; });
     rejects([&] { cancelled.submit(input.front()); }, "cancelled");
@@ -310,23 +352,42 @@ static Json validate_remote(const Json& value) {
     Json source_format, actual_format;
     auto reference = decode(id, input, start.at("input"), &source_format, tb);
     auto actual = decode(AV_CODEC_ID_FLAC, output, format, &actual_format);
+    const auto policy=start.at("output").value("layout_policy", "");
+    const bool automatic=policy=="dts-native-or-side-7.1-v1";
+    const bool padded = policy == "dts-side-5.1-to-7.1-silence-v1" || (automatic && source_format.at("channel_order")==Json({"FL","FR","FC","LFE","SL","SR"}));
+    if (automatic) test(name=="dts" && format.at("layout_policy")==policy && format.at("source_channel_order")==source_format.at("channel_order") && format.at("silent_channels")==(padded ? Json({"BL","BR"}) : Json::array()));
+    if (padded) {
+        test(name == "dts" && source_format.at("channel_order") == Json({"FL","FR","FC","LFE","SL","SR"}));
+        test(format.at("layout_policy") == start.at("output").at("layout_policy") && format.at("source_channel_order") == source_format.at("channel_order") && format.at("silent_channels") == Json({"BL","BR"}));
+        reference = padded_reference(reference);
+    }
     test(!reference.empty() && reference == actual);
     if (fixture.value("expected_source_profile", "") == "dts-hd-ma") {
         int profile = source_format.at("profile");
         test(profile == AV_PROFILE_DTS_HD_MA || profile == AV_PROFILE_DTS_HD_MA_X || profile == AV_PROFILE_DTS_HD_MA_X_IMAX);
         test(format.at("source_profile") == "dts-hd-ma");
     }
-    test(source_format.at("sample_rate") == actual_format.at("sample_rate") && source_format.at("channel_order") == actual_format.at("channel_order"));
+    test(source_format.at("sample_rate") == actual_format.at("sample_rate"));
+    test(padded ? actual_format.at("channel_order") == Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}) : source_format.at("channel_order") == actual_format.at("channel_order"));
     test(source_format.at("bits_per_sample") <= actual_format.at("bits_per_sample"));
     for (const char* key : {"sample_rate", "channel_order", "bits_per_sample"}) test(format.at(key) == actual_format.at(key));
     test(format.at("time_base").at("num") == 1 && format.at("time_base").at("den") == actual_format.at("sample_rate"));
     test(source_format.at("first_pts") == end.at("first_pts"));
     auto channels = actual_format.at("channel_order").size(); test(total * channels == actual.size());
-    return {{"status", "passed"}, {"criterion_id", "external_audio.host_pcm_equivalence.v1"},
+    Json proof = {{"status", "passed"}, {"criterion_id", "external_audio.host_pcm_equivalence.v1"},
         {"codec", name}, {"sample_rate", format.at("sample_rate")}, {"channel_order", format.at("channel_order")},
         {"bits_per_sample", format.at("bits_per_sample")}, {"valid_samples", std::to_string(total)},
         {"first_pts", end.at("first_pts")}, {"end_pts_exclusive", end.at("end_pts_exclusive")},
         {"reference_pcm_sha256", pcm_hash(reference)}, {"output_pcm_sha256", pcm_hash(actual)}, {"physical_acceptance", false}};
+    if (padded) {
+        proof["criterion_id"] = "external_audio.dts_side51_padding.pcm.v1";
+        proof["layout_policy"] = format.at("layout_policy");
+        proof["source_channel_order"] = source_format.at("channel_order");
+        proof["silent_channels"] = format.at("silent_channels");
+        proof["all_source_samples_equal"] = true;
+        proof["added_channels_exact_zero"] = true;
+    }
+    return proof;
 }
 static Json inspect_source(const Json& fixture) {
     const auto& input = fixture.at("start").at("input"); std::string name = input.at("codec");
@@ -429,6 +490,9 @@ int main(int argc, char** argv) {
         roundtrip(AV_CODEC_ID_MLP, "mlp", 2, 96000);
         roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000);
         roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000);
+        roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000, "side-padding");
+        roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000, "compatible");
+        roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000, "compatible");
         roundtrip(AV_CODEC_ID_TRUEHD, "truehd", 2, 48000, "negative");
         roundtrip(AV_CODEC_ID_TRUEHD, "truehd", 2, 48000, "missing-after-anchor");
         roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000, "skip-samples");

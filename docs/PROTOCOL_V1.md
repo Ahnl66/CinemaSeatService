@@ -340,3 +340,47 @@ before initiating WebSocket close. This avoids URLSession close callbacks
 overtaking error delivery on fast native runtimes. The existing close timeout
 still bounds teardown, and peer cancellation/socket failure closes immediately.
 This does not delay normal cancellation or change timestamp/codec acceptance.
+# Experimental DTS 5.1(side) carrier negotiation
+
+This extension is an explicit Diagnose investigation, not a new default route.
+`/v1/capabilities.output_layout_policies` advertises
+`dts-side-5.1-to-7.1-silence-v1`. A client opts in using
+`start.output.layout_policy` with that exact value, `input.codec = "dts"`,
+and either an unknown/null `channel_order_hint` or the exact source order
+`["FL","FR","FC","LFE","SL","SR"]`. A missing hint field, other policy,
+other codec or conflicting hint is refused. An unknown hint does not authorize
+another actual layout: decoded frames must be native 5.1(side).
+
+The service copies each source sample to its named output speaker. Output
+order is `["FL","FR","FC","LFE","BL","BR","SL","SR"]`; BL and BR are
+exact digital silence. No mixing, resampling, float conversion, trim or timeline
+change is introduced. Existing precision, sample-format and timebase checks apply.
+FIFO and packet/credit limits remain bounded in their original units.
+
+The `output_format` must echo `layout_policy`, include `source_channel_order`
+with the six source speakers, and `silent_channels = ["BL","BR"]`. STREAMINFO
+and `channel_order` describe the eight-channel carrier. Clients must verify all
+of these against the request before accepting any audio. A legacy service that
+ignores the request is refused by the client; no retry or implicit fallback is
+allowed. Default sessions neither request nor receive these extension fields.
+
+PCM evidence must compare all six original channels against reference decoding
+and require zero in both additional channels. Metadata alone cannot prove this.
+The physical renderer, speaker positions and lip sync require human judgement.
+
+
+
+## Production DTS compatibility policy (service 0.1.5)
+
+`start.output.layout_policy = "dts-native-or-side-7.1-v1"` is the production
+client negotiation for DTS. It accepts an optional source speaker hint, verifies
+that hint against actual decoded speakers, and selects the carrier from that
+measured layout. Only native 5.1(side) is expanded to FLAC 7.1 with zero BL/BR.
+Other supported DTS layouts preserve their exact source order and channel count.
+No layout is inferred from channel count. Non-DTS requests are refused.
+
+The reply echoes this policy, measured `source_channel_order`, actual output
+`channel_order`, and `silent_channels` (BL/BR for padded side 5.1, otherwise an
+empty array). Clients validate the entire relationship and reject a missing echo,
+conflicting hints, invented silence or changed speaker positions. Existing
+TrueHD/MLP negotiation, strict timing, rate and precision remain unchanged.

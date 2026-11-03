@@ -22,6 +22,15 @@ CodecPipeline::CodecPipeline(const Json& s, int threads, int cap,
     (void)decimal<int64_t>(s.at("timeline").at("audible_from_us"));
     const auto& input = s.at("input");
     const std::string name = input.at("codec").get<std::string>();
+    if (s.at("output").contains("layout_policy")) {
+        require(input.contains("channel_order_hint"));
+        const auto& policy = s.at("output").at("layout_policy");
+        compatible_dts = policy == "dts-native-or-side-7.1-v1";
+        require(compatible_dts || policy == "dts-side-5.1-to-7.1-silence-v1", "unsupported_format");
+        require(name == "dts", "unsupported_format");
+        if (!compatible_dts) require(input.at("channel_order_hint").is_null() || input.at("channel_order_hint") == Json({"FL","FR","FC","LFE","SL","SR"}), "unsupported_format");
+        pad_side = !compatible_dts;
+    }
     AVCodecID id = name == "dts" ? AV_CODEC_ID_DTS : name == "truehd" ? AV_CODEC_ID_TRUEHD : name == "mlp" ? AV_CODEC_ID_MLP : AV_CODEC_ID_NONE;
     require(id != AV_CODEC_ID_NONE, "unsupported_codec");
     for (const char* key : {"sample_rate_hint", "bits_per_sample_hint", "channel_order_hint"}) require(input.contains(key));
@@ -97,6 +106,9 @@ static Json channel_names(const AVChannelLayout& layout) {
 }
 void CodecPipeline::open_encoder(AVFrame* frame) {
     auto channels = channel_names(frame->ch_layout);
+    source_mask = frame->ch_layout.u.mask;
+    if (compatible_dts) pad_side = source_mask == AV_CH_LAYOUT_5POINT1 && frame->ch_layout.nb_channels == 6;
+    if (pad_side) require(source_mask == AV_CH_LAYOUT_5POINT1 && frame->ch_layout.nb_channels == 6, "unsupported_format");
     require(frame->sample_rate >= 8000 && frame->sample_rate <= 192000, "unsupported_format");
     auto packed = av_get_packed_sample_fmt(static_cast<AVSampleFormat>(frame->format));
     require(packed == AV_SAMPLE_FMT_S16 || packed == AV_SAMPLE_FMT_S32, "unsupported_format");
@@ -111,19 +123,25 @@ void CodecPipeline::open_encoder(AVFrame* frame) {
     encoder->bits_per_raw_sample = packed == AV_SAMPLE_FMT_S16 ? 16 : 24;
     encoder->time_base = {1, frame->sample_rate}; encoder->thread_count = decoder->thread_count;
     encoder->flags |= AV_CODEC_FLAG_GLOBAL_HEADER; encoder->compression_level = 1; encoder->frame_size = 4096;
-    ok(av_channel_layout_copy(&encoder->ch_layout, &frame->ch_layout), "internal_error");
+    if (pad_side) ok(av_channel_layout_from_mask(&encoder->ch_layout, AV_CH_LAYOUT_7POINT1), "internal_error");
+    else ok(av_channel_layout_copy(&encoder->ch_layout, &frame->ch_layout), "internal_error");
     ok(avcodec_open2(encoder.get(), encoder->codec, nullptr), "encode_failed");
     require(encoder->frame_size == 4096 && encoder->extradata_size == 34 && encoder->sample_rate == frame->sample_rate && encoder->sample_fmt == packed, "encode_failed");
     uint64_t stream = AV_RB64(encoder->extradata + 10);
-    require(int(stream >> 44) == encoder->sample_rate && int(((stream >> 41) & 7) + 1) == frame->ch_layout.nb_channels && int(((stream >> 36) & 31) + 1) == encoder->bits_per_raw_sample, "encode_failed");
-    fifo.reset(av_audio_fifo_alloc(packed, frame->ch_layout.nb_channels, fifo_cap)); require(bool(fifo), "internal_error");
+    require(int(stream >> 44) == encoder->sample_rate && int(((stream >> 41) & 7) + 1) == encoder->ch_layout.nb_channels && int(((stream >> 36) & 31) + 1) == encoder->bits_per_raw_sample, "encode_failed");
+    fifo.reset(av_audio_fifo_alloc(packed, encoder->ch_layout.nb_channels, fifo_cap)); require(bool(fifo), "internal_error");
     input_format = frame->format; input_precision = precision;
     const char* profile = decoder->codec_id == AV_CODEC_ID_DTS ? "dts" : decoder->codec_id == AV_CODEC_ID_TRUEHD ? "truehd" : "mlp";
     if (decoder->profile == AV_PROFILE_DTS_HD_MA || decoder->profile == AV_PROFILE_DTS_HD_MA_X || decoder->profile == AV_PROFILE_DTS_HD_MA_X_IMAX) profile = "dts-hd-ma";
     format = {{"type", "output_format"}, {"generation", std::to_string(generation)}, {"codec", "flac"},
-        {"sample_rate", encoder->sample_rate}, {"bits_per_sample", encoder->bits_per_raw_sample}, {"channel_order", channels},
+        {"sample_rate", encoder->sample_rate}, {"bits_per_sample", encoder->bits_per_raw_sample}, {"channel_order", channel_names(encoder->ch_layout)},
         {"time_base", {{"num", 1}, {"den", encoder->sample_rate}}}, {"extradata_base64", base64({encoder->extradata, 34})},
         {"source_profile", profile}, {"object_metadata_preserved", false}};
+    if (pad_side || compatible_dts) {
+        format["layout_policy"] = compatible_dts ? "dts-native-or-side-7.1-v1" : "dts-side-5.1-to-7.1-silence-v1";
+        format["source_channel_order"] = channels;
+        format["silent_channels"] = pad_side ? Json({"BL","BR"}) : Json::array();
+    }
     on_format(format);
 }
 Json CodecPipeline::timeline_failure(AVFrame* frame, int64_t timestamp, int64_t observed, int64_t tolerance) const {
@@ -150,7 +168,8 @@ void CodecPipeline::decoded(AVFrame* frame) {
     decoded_frames=add(decoded_frames,1);
     require(frame->nb_samples > 0 && frame->nb_samples <= fifo_cap, "limit_exceeded");
     if (!encoder) open_encoder(frame);
-    require(frame->sample_rate == encoder->sample_rate && frame->format == input_format && decoder->bits_per_raw_sample == input_precision && av_channel_layout_compare(&frame->ch_layout, &encoder->ch_layout) == 0, "format_changed");
+    require(frame->sample_rate == encoder->sample_rate && frame->format == input_format && decoder->bits_per_raw_sample == input_precision &&
+        (pad_side ? av_channel_layout_check(&frame->ch_layout) && frame->ch_layout.order == AV_CHANNEL_ORDER_NATIVE && frame->ch_layout.u.mask == source_mask : av_channel_layout_compare(&frame->ch_layout, &encoder->ch_layout) == 0), "format_changed");
     int64_t timestamp = frame->pts != AV_NOPTS_VALUE ? frame->pts : frame->best_effort_timestamp;
     if (!anchored) {
         require(timestamp != AV_NOPTS_VALUE, "missing_timeline");
@@ -171,9 +190,14 @@ void CodecPipeline::decoded(AVFrame* frame) {
     int bytes = av_get_bytes_per_sample(encoder->sample_fmt), channels = encoder->ch_layout.nb_channels;
     bool planar = av_sample_fmt_is_planar(static_cast<AVSampleFormat>(frame->format));
     for (int i = 0; i < frame->nb_samples; ++i) for (int ch = 0; ch < channels; ++ch) {
-        auto* src = frame->extended_data[planar ? ch : 0] + (planar ? i : i * channels + ch) * bytes;
+        auto* dst = packed->data[0] + (i * channels + ch) * bytes;
+        if (pad_side && (ch == 4 || ch == 5)) { std::memset(dst, 0, bytes); continue; }
+        // Native order: FL FR FC LFE [silent BL BR] SL SR.
+        int source_ch = pad_side && ch >= 6 ? ch - 2 : ch;
+        int source_channels = frame->ch_layout.nb_channels;
+        auto* src = frame->extended_data[planar ? source_ch : 0] + (planar ? i : i * source_channels + source_ch) * bytes;
         if (bytes == 4) { int32_t sample; std::memcpy(&sample, src, 4); require((sample & 255) == 0, "unsupported_format"); }
-        std::memcpy(packed->data[0] + (i * channels + ch) * bytes, src, bytes);
+        std::memcpy(dst, src, bytes);
     }
     require(frame->nb_samples <= fifo_cap - av_audio_fifo_size(fifo.get()), "limit_exceeded");
     require(av_audio_fifo_write(fifo.get(), reinterpret_cast<void**>(packed->data), frame->nb_samples) == frame->nb_samples, "internal_error");

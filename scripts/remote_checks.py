@@ -75,11 +75,13 @@ def main():
     inputs.add_argument('--source', type=Path, help='Authorized local source; path is never sent or reported')
     parser.add_argument('--exporter', type=Path)
     parser.add_argument('--audio-ordinal', type=int, default=0)
+    parser.add_argument('--layout-policy', choices=['dts-side-5.1-to-7.1-silence-v1','dts-native-or-side-7.1-v1'], help='Explicit original-source side padding investigation')
     parser.add_argument('--seconds', type=int, choices=range(1, 16), default=5)
     parser.add_argument('--sessions', type=int, choices=[1, 2, 4], default=1)
     parser.add_argument('--iterations', type=int, default=1)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
+    if args.layout_policy and not args.source:parser.error('--layout-policy requires --source')
     if not 1 <= args.iterations <= 100:
         parser.error('iterations must be 1..100')
     if args.source and not args.exporter:
@@ -102,6 +104,11 @@ def main():
             if export.returncode:
                 raise RuntimeError('source_fixture_failed')
             fixture = json.loads(export.stdout)
+            if args.layout_policy:
+                if args.layout_policy not in caps.get('output_layout_policies',[]):raise RuntimeError('unsupported_layout_policy')
+                if fixture['start']['input']['codec']!='dts':raise RuntimeError('unsupported_layout_policy')
+                fixture['start']['output']['layout_policy']=args.layout_policy
+                report['desired_settings']={'layout_policy':args.layout_policy,'source_channel_order':['FL','FR','FC','LFE','SL','SR'],'output_channel_order':['FL','FR','FC','LFE','BL','BR','SL','SR'],'silent_channels':['BL','BR']}
             source = fixture['start']['input']
             report['source_description'] = {key: source[key] for key in ['codec', 'sample_rate_hint', 'bits_per_sample_hint', 'channel_order_hint', 'time_base']}
             report['source_description']['expected_source_profile'] = fixture.get('expected_source_profile')
@@ -143,7 +150,7 @@ def main():
             report['partial_output'] = error.evidence
             error = error.cause
         # Fixed error categories only; no filenames, endpoint or raw codec errors.
-        allowed = {'source_fixture_failed', 'source_reference_decode_failed', 'missing_fixtures', 'capacity', 'session_cleanup_failed', 'output_validation_failed', 'observation_limit'}
+        allowed = {'source_fixture_failed', 'source_reference_decode_failed', 'missing_fixtures', 'capacity', 'session_cleanup_failed', 'output_validation_failed', 'observation_limit', 'unsupported_layout_policy'}
         report['status'] = 'failed'
         report['error_kind'] = type(error).__name__
         report['error_code'] = str(error) if str(error) in allowed else 'remote_check_failed'

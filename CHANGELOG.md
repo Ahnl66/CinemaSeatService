@@ -1,3 +1,9 @@
+# 0.1.5 — 2026-11-03
+
+- Support DTS 5.1(side) in native FLAC/fMP4 playback by preserving the six source speakers in a 7.1 carrier with silent back left/right channels.
+- Add negotiated automatic DTS layout handling: stereo and other supported native layouts retain their original speaker positions and channel count.
+- Validate and report the measured source/output mapping; reject mismatched hints or unconfirmed negotiation. Sample precision, rate and timing are preserved.
+
 # 0.1.4 — 2026-11-02 (diagnostic service update)
 
 - Bug fix: give a completed error frame a bounded 100 ms delivery window before
