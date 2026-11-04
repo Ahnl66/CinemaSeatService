@@ -165,7 +165,8 @@ void Session::http_request() {
     if (req.target() == "/v1/capabilities") return respond(http::status::ok, {
         {"protocol", 1}, {"service_version", CSAD_SERVICE_VERSION}, {"build_id", CSAD_BUILD_ID}, {"ffmpeg_revision", revision},
         {"input_codecs", {"dts", "truehd", "mlp"}}, {"output_codecs", {"flac"}},
-        {"output_layout_policies", {"dts-side-5.1-to-7.1-silence-v1", "dts-native-or-side-7.1-v1"}},
+        {"startup_policies", {"dts-initial-xll-preroll-v1"}},
+        {"output_layout_policies", {"dts-side-5.1-to-7.1-silence-v1", "dts-native-or-side-7.1-v1", "dts-flac-carrier-v2"}},
         {"limits", config.value["limits"]}, {"available_sessions", std::max(0, config.get("sessions", "maximum") - owner.slots.load())}});
     if (req.target() != "/v1/session") return respond(http::status::not_found, {{"code", "protocol_error"}});
     if (!ws::is_upgrade(req) || req[http::field::sec_websocket_protocol] != "cs-audio.v1")

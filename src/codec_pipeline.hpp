@@ -27,8 +27,11 @@ class CodecPipeline {
     Json timeline_failure(AVFrame* frame, int64_t timestamp, int64_t observed, int64_t tolerance) const;
     std::optional<int64_t> priming_pts;
     int input_format = -1, input_precision = 0, fifo_cap;
-    bool anchored = false, finished = false, pad_side = false, compatible_dts = false;
+    bool anchored = false, finished = false, pad_side = false, compatible_dts = false, carrier_dts = false, pad_stereo_lfe = false;
     uint64_t source_mask = 0;
+    bool allow_initial_xll = false, rejected_initial_xll = false;
+    int64_t initial_xll_pts = 0, initial_xll_duration = 0;
+    Json startup_priming = nullptr;
     std::function<void(const Json&)> on_format;
     std::function<void(Packet)> on_packet;
     std::function<bool()> cancelled;

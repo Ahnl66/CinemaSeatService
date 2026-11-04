@@ -1,3 +1,15 @@
+# Release 0.1.5 negotiation additions — 2026-11-04
+
+Protocol remains 1. Capabilities advertise `output_layout_policies` including `dts-native-or-side-7.1-v1` and `dts-flac-carrier-v2`, and `startup_policies` including `dts-initial-xll-preroll-v1`.
+
+`start.output.layout_policy=dts-flac-carrier-v2` preserves ordinary supported DTS layouts, carries side 5.1 in canonical 7.1 with silent BL/BR, and carries FL/FR/LFE 2.1 in canonical 7.1 with silent FC/BL/BR/SL/SR. The output format echoes `layout_policy`, measured `source_channel_order`, actual `channel_order` and exact `silent_channels`; clients validate identities, never channel count alone. Legacy policy behavior is retained.
+
+Optional `start.output.startup_policy=dts-initial-xll-preroll-v1` requires DTS and the v2 carrier. Only the specifically typed initial XLL refusal at packet zero may be consumed once, with valid equal nonnegative PTS/DTS, positive duration at most 100 ms, and no trims. The next complete frame must be DTS-HD MA, 7.1 and 24-bit, within the verified initial frame/timebase bound. Other errors, repeated/later priming and incompatible formats fail.
+
+When applied, `output_format.startup_priming` has exactly these fields: `policy`, integer `rejected_packets=1`, canonical nonnegative numeric strings `first_input_pts`, `first_output_pts`, `first_decoded_pts`, `leading_gap_samples`, integer `frame_samples` in 1..4096, and nullable `input_channel_order_hint` (5.1(side) or 7.1). PTS values use output sample units. Output minus input equals the missing frame sample count exactly; the observed decoded timestamp may differ only within one original container tick. The source prefix is explicitly missing; no PCM is fabricated. Clients bind the evidence to their requested policy, original first packet/hint and actual first output packet. Hints are superseded only by this verified full-HD startup contract.
+
+## Earlier protocol documentation
+
 # CinemaSeat Audio Decoder — wire protocol v1
 
 Normative contract dated 2026-11-01. The native server is partially host-proven;

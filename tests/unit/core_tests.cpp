@@ -110,7 +110,7 @@ static std::vector<Packet> generate(AVCodecID id, int channels, int rate) {
     }
     test(avcodec_send_frame(enc.get(), nullptr) >= 0); receive(); test(!packets.empty()); return packets;
 }
-static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& packets, const Json& format = {}, Json* measured = nullptr, AVRational source_tb = {0, 1}, Json* trace = nullptr) {
+static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& packets, const Json& format = {}, Json* measured = nullptr, AVRational source_tb = {0, 1}, Json* trace = nullptr, bool initial_xll_preroll = false) {
     CodecPtr dec(avcodec_alloc_context3(avcodec_find_decoder(id))); test(bool(dec));
     dec->flags |= AV_CODEC_FLAG_BITEXACT; dec->err_recognition = AV_EF_CRCCHECK | AV_EF_BITSTREAM | AV_EF_BUFFER | AV_EF_EXPLODE; dec->pkt_timebase = source_tb;
     if (!format.empty()) {
@@ -132,10 +132,11 @@ static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& pack
         std::memcpy(dec->extradata, extra.data(), extra.size()); dec->extradata_size = extra.size();
     }
     test(avcodec_open2(dec.get(), dec->codec, nullptr) >= 0);
-    std::vector<int32_t> pcm;
+    std::vector<int32_t> pcm; int rejected_initial = 0;
     auto receive = [&] {
         FramePtr frame(av_frame_alloc()); int r;
         while ((r = avcodec_receive_frame(dec.get(), frame.get())) >= 0) {
+            if (rejected_initial) test(frame->ch_layout.nb_channels==8 && dec->bits_per_raw_sample==24 && (dec->profile==AV_PROFILE_DTS_HD_MA || dec->profile==AV_PROFILE_DTS_HD_MA_X || dec->profile==AV_PROFILE_DTS_HD_MA_X_IMAX));
             if (measured) {
                 Json names = Json::array();
                 for (int ch = 0; ch < frame->ch_layout.nb_channels; ++ch) {
@@ -172,9 +173,11 @@ static std::vector<int32_t> decode(AVCodecID id, const std::vector<Packet>& pack
             auto* side = av_packet_new_side_data(packet.get(), AV_PKT_DATA_SKIP_SAMPLES, 10);
             test(side); AV_WL32(side, p.skip_start); AV_WL32(side + 4, p.skip_end); side[8] = side[9] = 0;
         }
-        test(avcodec_send_packet(dec.get(), packet.get()) >= 0); receive();
+        int result=avcodec_send_packet(dec.get(), packet.get());
+        if(initial_xll_preroll && p.sequence==0 && pcm.empty() && result==FFERRTAG('X','L','L','P')) { ++rejected_initial; continue; }
+        test(result >= 0); receive();
     }
-    test(avcodec_send_packet(dec.get(), nullptr) >= 0); receive(); return pcm;
+    test(avcodec_send_packet(dec.get(), nullptr) >= 0); receive(); if(measured)(*measured)["initial_xll_rejections"]=rejected_initial; return pcm;
 }
 static std::string export_dir;
 static std::vector<int32_t> padded_reference(const std::vector<int32_t>& source) {
@@ -197,9 +200,10 @@ static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, c
         {"input", {{"codec", codec}, {"time_base", {{"num", 1}, {"den", rate}}}, {"extradata_base64", ""},
                    {"sample_rate_hint", nullptr}, {"bits_per_sample_hint", nullptr}, {"channel_order_hint", nullptr}}},
         {"output", {{"codec", "flac"}}}, {"timeline", {{"audible_from_us", "30000000"}}}, {"output_limit_bytes", "4194304"}};
-    const bool automatic = variant == "compatible";
+    const bool automatic = variant == "compatible" || variant == "carrier" || variant == "startup";
     const bool padded = variant == "side-padding" || (automatic && channels == 6);
-    if (automatic) start["output"]["layout_policy"] = "dts-native-or-side-7.1-v1";
+    if (automatic) start["output"]["layout_policy"] = (variant == "carrier" || variant == "startup") ? "dts-flac-carrier-v2" : "dts-native-or-side-7.1-v1";
+    if (variant == "startup") start["output"]["startup_policy"]="dts-initial-xll-preroll-v1";
     if (padded && !automatic) {
         test(id == AV_CODEC_ID_DTS && channels == 6);
         start["output"]["layout_policy"] = "dts-side-5.1-to-7.1-silence-v1";
@@ -244,7 +248,7 @@ static void roundtrip(AVCodecID id, const char* codec, int channels, int rate, c
     test(samples == decimal<uint64_t>(end.at("total_samples")) && next == decimal<int64_t>(end.at("end_pts_exclusive")));
     test(samples * (padded ? 8 : channels) == actual.size());
     if (padded) test(format.at("layout_policy") == start.at("output").at("layout_policy") && format.at("source_channel_order") == Json({"FL","FR","FC","LFE","SL","SR"}) && format.at("silent_channels") == Json({"BL","BR"}) && format.at("channel_order") == Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}));
-    if (automatic && !padded) test(format.at("layout_policy") == "dts-native-or-side-7.1-v1" && format.at("source_channel_order") == format.at("channel_order") && format.at("silent_channels").empty());
+    if (automatic && !padded) test(format.at("layout_policy") == start.at("output").at("layout_policy") && format.at("source_channel_order") == format.at("channel_order") && format.at("silent_channels").empty());
     bool cancel = true;
     CodecPipeline cancelled(start, 1, 65536, [](auto) {}, [](auto) {}, [&] { return cancel; });
     rejects([&] { cancelled.submit(input.front()); }, "cancelled");
@@ -308,9 +312,9 @@ static void format_change_regression() {
     test(rejected); std::cout << "real midstream TrueHD rate change PASS: format_changed, no resampling/reconfiguration\n";
 }
 // Test-only packets stay in RAM. The public result contains derived properties/hashes.
-static std::vector<uint8_t> packet_base64(const Json& value) {
+static std::vector<uint8_t> packet_base64(const Json& value, size_t maximum = 1048640) {
     test(value.is_string()); const auto& text = value.get_ref<const std::string&>();
-    test(text.size() <= ((1048640 + 2) / 3) * 4);
+    test(text.size() <= ((maximum + 2) / 3) * 4);
     std::vector<uint8_t> bytes;
     for (size_t offset = 0; offset < text.size(); offset += 65536) {
         auto part = unbase64(text.substr(offset, 65536)); bytes.insert(bytes.end(), part.begin(), part.end());
@@ -353,13 +357,20 @@ static Json validate_remote(const Json& value) {
     auto reference = decode(id, input, start.at("input"), &source_format, tb);
     auto actual = decode(AV_CODEC_ID_FLAC, output, format, &actual_format);
     const auto policy=start.at("output").value("layout_policy", "");
-    const bool automatic=policy=="dts-native-or-side-7.1-v1";
+    const bool automatic=policy=="dts-native-or-side-7.1-v1" || policy=="dts-flac-carrier-v2";
+    const bool padded21=policy=="dts-flac-carrier-v2" && source_format.at("channel_order")==Json({"FL","FR","LFE"});
     const bool padded = policy == "dts-side-5.1-to-7.1-silence-v1" || (automatic && source_format.at("channel_order")==Json({"FL","FR","FC","LFE","SL","SR"}));
-    if (automatic) test(name=="dts" && format.at("layout_policy")==policy && format.at("source_channel_order")==source_format.at("channel_order") && format.at("silent_channels")==(padded ? Json({"BL","BR"}) : Json::array()));
+    if (automatic) test(name=="dts" && format.at("layout_policy")==policy && format.at("source_channel_order")==source_format.at("channel_order") && format.at("silent_channels")==(padded ? Json({"BL","BR"}) : padded21 ? Json({"FC","BL","BR","SL","SR"}) : Json::array()));
     if (padded) {
         test(name == "dts" && source_format.at("channel_order") == Json({"FL","FR","FC","LFE","SL","SR"}));
         test(format.at("layout_policy") == start.at("output").at("layout_policy") && format.at("source_channel_order") == source_format.at("channel_order") && format.at("silent_channels") == Json({"BL","BR"}));
         reference = padded_reference(reference);
+    }
+    if (padded21) {
+        test(name=="dts" && reference.size()%3==0 && format.at("channel_order")==Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}));
+        std::vector<int32_t> expected; expected.reserve(reference.size()/3*8);
+        for(size_t i=0;i<reference.size();i+=3) { expected.push_back(reference[i]);expected.push_back(reference[i+1]);expected.push_back(0);expected.push_back(reference[i+2]);expected.push_back(0);expected.push_back(0);expected.push_back(0);expected.push_back(0); }
+        reference=std::move(expected);
     }
     test(!reference.empty() && reference == actual);
     if (fixture.value("expected_source_profile", "") == "dts-hd-ma") {
@@ -368,7 +379,7 @@ static Json validate_remote(const Json& value) {
         test(format.at("source_profile") == "dts-hd-ma");
     }
     test(source_format.at("sample_rate") == actual_format.at("sample_rate"));
-    test(padded ? actual_format.at("channel_order") == Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}) : source_format.at("channel_order") == actual_format.at("channel_order"));
+    test(padded21 ? actual_format.at("channel_order")==Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}) : padded ? actual_format.at("channel_order") == Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}) : source_format.at("channel_order") == actual_format.at("channel_order"));
     test(source_format.at("bits_per_sample") <= actual_format.at("bits_per_sample"));
     for (const char* key : {"sample_rate", "channel_order", "bits_per_sample"}) test(format.at(key) == actual_format.at(key));
     test(format.at("time_base").at("num") == 1 && format.at("time_base").at("den") == actual_format.at("sample_rate"));
@@ -379,8 +390,8 @@ static Json validate_remote(const Json& value) {
         {"bits_per_sample", format.at("bits_per_sample")}, {"valid_samples", std::to_string(total)},
         {"first_pts", end.at("first_pts")}, {"end_pts_exclusive", end.at("end_pts_exclusive")},
         {"reference_pcm_sha256", pcm_hash(reference)}, {"output_pcm_sha256", pcm_hash(actual)}, {"physical_acceptance", false}};
-    if (padded) {
-        proof["criterion_id"] = "external_audio.dts_side51_padding.pcm.v1";
+    if (padded || padded21) {
+        proof["criterion_id"] = padded21 ? "external_audio.dts21_carrier.pcm.v1" : "external_audio.dts_side51_padding.pcm.v1";
         proof["layout_policy"] = format.at("layout_policy");
         proof["source_channel_order"] = source_format.at("channel_order");
         proof["silent_channels"] = format.at("silent_channels");
@@ -417,6 +428,27 @@ static Json inspect_source(const Json& fixture) {
         {"trace_truncated", measured.at("decoded_frames").get<size_t>() > trace.size()},
         {"source_timeline_accepted", !measured.contains("first_discontinuous_frame")},
         {"valid_samples", std::to_string(pcm.size() / measured.at("channel_order").size())}, {"canonical_pcm_sha256", pcm_hash(pcm)}};
+}
+static Json validate_native_primed(const Json& body) {
+    const auto& fixture=body.at("fixture"); const auto& input=fixture.at("start").at("input");
+    test(input.at("codec")=="dts"); std::vector<Packet> packets;
+    auto generation=decimal<uint64_t>(fixture.at("start").at("generation"));
+    for(const auto& p:fixture.at("packets")) packets.push_back(parse_packet(packet_base64(p),1,generation,packets.size()));
+    Json measured; AVRational tb{integer(input.at("time_base").at("num"),1,1000000000),integer(input.at("time_base").at("den"),1,1000000000)};
+    auto reference=decode(AV_CODEC_ID_DTS,packets,input,&measured,tb,nullptr,true);
+    test(measured.at("initial_xll_rejections")==1 && measured.at("channel_order")==Json({"FL","FR","FC","LFE","BL","BR","SL","SR"}) && measured.at("bits_per_sample")==24);
+    auto raw=packet_base64(body.at("pcm_base64"),16*1024*1024); test(raw.size()>=reference.size()*4);
+    std::vector<int32_t> actual; actual.reserve(reference.size());
+    for(size_t i=0;i<reference.size();++i) actual.push_back(static_cast<int32_t>(AV_RL32(raw.data()+i*4)));
+    test(reference==actual && !reference.empty());
+    auto start=fixture.at("start");start["output"]["layout_policy"]="dts-flac-carrier-v2";start["output"]["startup_policy"]="dts-initial-xll-preroll-v1";
+    auto initial=packets.front();auto corrupt=initial;corrupt.payload.assign(32,0);
+    CodecPipeline invalid(start,1,65536,[](auto){},[](auto){});rejects([&]{invalid.submit(corrupt);},"decode_failed");
+    CodecPipeline repeated(start,1,65536,[](auto){},[](auto){});repeated.submit(initial);auto duplicate=initial;duplicate.sequence=1;
+    rejects([&]{repeated.submit(duplicate);});
+    return {{"status","passed"},{"criterion_id","external_audio.dts_xll_preroll.pcm.v1"},{"reference_pcm_sha256",pcm_hash(reference)},{"output_pcm_sha256",pcm_hash(actual)},
+        {"compared_samples",std::to_string(reference.size()/8)},{"channels",8},{"bits_per_sample",24},{"leading_coverage_missing",true},{"rejected_initial_packets",1},
+        {"corrupt_first_packet_rejected",true},{"repeated_priming_rejected",true},{"physical_acceptance",false}};
 }
 static Json inspect_after_recovery(const Json& fixture) {
     const auto& input = fixture.at("start").at("input"); test(input.at("codec") == "dts");
@@ -464,13 +496,13 @@ static Json inspect_after_recovery(const Json& fixture) {
     }
     throw std::runtime_error("no bounded full-HD metadata observation");
 }
-static int remote_validation_stdin(bool inspect = false, bool recovery_probe = false) {
+static int remote_validation_stdin(bool inspect = false, bool recovery_probe = false, bool native_primed = false) {
     try {
         std::string text; char block[8192];
         while (std::cin.read(block, sizeof(block)) || std::cin.gcount()) {
             test(text.size() + std::cin.gcount() <= 64 * 1024 * 1024); text.append(block, std::cin.gcount());
         }
-        std::cout << (recovery_probe ? inspect_after_recovery(Json::parse(text)) : inspect ? inspect_source(Json::parse(text)) : validate_remote(Json::parse(text))).dump() << '\n'; return 0;
+        std::cout << (native_primed ? validate_native_primed(Json::parse(text)) : recovery_probe ? inspect_after_recovery(Json::parse(text)) : inspect ? inspect_source(Json::parse(text)) : validate_remote(Json::parse(text))).dump() << '\n'; return 0;
     } catch (const std::exception& error) {
         Json failure{{"status", "failed"}, {"code", "output_validation_failed"},
             {"decoder_observation", {{"criterion_id", "external_audio.decoder_policy.v1"}, {"xll_recovery_requested", std::to_string(observed_xll_recovery.load())}}}};
@@ -481,6 +513,7 @@ static int remote_validation_stdin(bool inspect = false, bool recovery_probe = f
 }
 int main(int argc, char** argv) {
     av_log_set_level(AV_LOG_QUIET);
+    if (argc == 2 && std::string(argv[1]) == "--validate-native-primed") return remote_validation_stdin(false,false,true);
     if (argc == 2 && std::string(argv[1]) == "--inspect-after-recovery") { av_log_set_level(AV_LOG_VERBOSE); av_log_set_callback(policy_log); return remote_validation_stdin(false, true); }
     if (argc == 2 && std::string(argv[1]) == "--inspect-source") { av_log_set_level(AV_LOG_VERBOSE); av_log_set_callback(policy_log); return remote_validation_stdin(true); }
     if (argc == 2 && std::string(argv[1]) == "--validate-remote") return remote_validation_stdin();
@@ -493,6 +526,10 @@ int main(int argc, char** argv) {
         roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000, "side-padding");
         roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000, "compatible");
         roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000, "compatible");
+        roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000, "carrier");
+        roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000, "carrier");
+        roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000, "startup");
+        roundtrip(AV_CODEC_ID_DTS, "dts", 6, 48000, "startup");
         roundtrip(AV_CODEC_ID_TRUEHD, "truehd", 2, 48000, "negative");
         roundtrip(AV_CODEC_ID_TRUEHD, "truehd", 2, 48000, "missing-after-anchor");
         roundtrip(AV_CODEC_ID_DTS, "dts", 2, 48000, "skip-samples");

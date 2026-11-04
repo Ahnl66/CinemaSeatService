@@ -10,7 +10,7 @@ def build(scratch, test_codecs=False):
     scratch = Path(scratch).resolve()
     scratch.mkdir(parents=True, exist_ok=True)
     prefix = scratch / ('test-deps' if test_codecs else 'deps')
-    stamp = hashlib.sha256((json.dumps(MANIFEST, sort_keys=True) + str(test_codecs) + 'build-v4-strict-xll' + ('-local-demux-v1' if test_codecs else '')).encode()).hexdigest()
+    stamp = hashlib.sha256((json.dumps(MANIFEST, sort_keys=True) + str(test_codecs) + 'build-v5-typed-xll-preroll' + ('-local-demux-v1' if test_codecs else '')).encode()).hexdigest()
     if (prefix / 'stamp').exists() and (prefix / 'stamp').read_text() == stamp:
         return prefix
     include = prefix / 'include'
@@ -48,12 +48,14 @@ def build(scratch, test_codecs=False):
     # Refuse FFmpeg's successful lossy XLL recovery; no silent core output.
     xll = sources['ffmpeg'] / 'libavcodec/dca_xll.c'
     original = 'if (dca->packet & DCA_PACKET_RECOVERY) {'
-    strict = original + '\n        return AVERROR_INVALIDDATA; /* CSAD: reject lossy XLL recovery */'
+    strict = original + '\n        return FFERRTAG(\'X\',\'L\',\'L\',\'P\'); /* CSAD: typed refusal, never lossy XLL recovery */'
     text = xll.read_text()
-    if strict not in text:
-        if text.count(original) != 1:
-            raise RuntimeError('Pinned XLL recovery patch no longer applies')
-        xll.write_text(text.replace(original, strict))
+    legacy = original + '\n        return AVERROR_INVALIDDATA; /* CSAD: reject lossy XLL recovery */'
+    if legacy in text: text = text.replace(legacy, strict)
+    elif strict not in text:
+        if text.count(original) != 1: raise RuntimeError('Pinned XLL recovery patch no longer applies')
+        text = text.replace(original, strict)
+    xll.write_text(text)
     directory = scratch / ('test-ffmpeg-build' if test_codecs else 'ffmpeg-build')
     directory.mkdir(exist_ok=True)
     flags = ['--disable-everything', '--disable-autodetect', '--disable-programs', '--disable-doc',

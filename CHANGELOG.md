@@ -1,8 +1,19 @@
-# 0.1.5 — 2026-11-03
+# 0.1.5 — 2026-11-04
 
-- Support DTS 5.1(side) in native FLAC/fMP4 playback by preserving the six source speakers in a 7.1 carrier with silent back left/right channels.
-- Add negotiated automatic DTS layout handling: stereo and other supported native layouts retain their original speaker positions and channel count.
-- Validate and report the measured source/output mapping; reject mismatched hints or unconfirmed negotiation. Sample precision, rate and timing are preserved.
+All changes since 0.1.4 are consolidated into 0.1.5. Intermediate development labels 0.1.6 and 0.1.7 were provisional. The matching CinemaSeat app release is 0.2.24 / build 36.
+
+## Bug fixes and playback support
+- Preserve DTS 5.1(side) speakers in FLAC 7.1 with silent back-left/right channels; retain the source speakers and channel count for other supported native DTS layouts.
+- Support DTS-HD MA FL/FR/LFE (2.1), including Earthquake, in a negotiated FLAC 7.1 carrier with exact silence in FC/BL/BR/SL/SR. Preserve every original speaker sample.
+- Fix Spectre DTS-HD startup through explicit, bounded initial XLL priming. Consume at most one specifically identified initial refusal, then require complete 7.1/24-bit frames. Declare the missing first frame and preserve the exact sample clock; never output the lossy core as a successful fallback.
+- Negotiate the verified full-HD format after priming rather than treating an initial six-channel core hint as the final source layout. Arbitrary corruption, repeated/later recovery, format changes and later timeline errors remain fatal.
+- Validate echoed source/output/silence mappings and negotiated startup metadata. Retain legacy layout-policy behavior, sample precision/rate, strict timing tolerance, cancellation and bounded cleanup. TrueHD/MLP behavior is unchanged.
+
+## Reusable verification support
+- Add healthy DTS and source-gated carrier/priming checks, strict reference sample/hash comparisons, missing-prefix evidence, and corrupt/repeated-priming rejection cases. Keep packet and decoded media out of reports.
+- Preserve previous runtime codec exclusions and standalone reproducible dependency/container builds; expose supported startup and carrier policies in capabilities.
+
+Regression tests were not rerun for this commit at the user's explicit request. Earlier host, simulator-independent and source-gated checks remain separately recorded evidence, with their original observed version labels. No new deployment is performed by this version correction.
 
 # 0.1.4 — 2026-11-02 (diagnostic service update)
 

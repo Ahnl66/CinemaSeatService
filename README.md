@@ -1,10 +1,10 @@
-# CinemaSeat Audio Decoder 0.1.5 — 2026-11-03
+# CinemaSeat Audio Decoder 0.1.5 — 2026-11-04
 
-Production DTS compatibility: the client negotiates the carrier from the decoded
-speaker layout. DTS 5.1(side) preserves its six speakers in FLAC 7.1 with silent
-back left/right; other supported DTS layouts retain their channel count and order.
-Sample values, precision, rate and timing are preserved. TrueHD/MLP behavior is
-unchanged. See `docs/PROTOCOL_V1.md` and `CHANGELOG.md`.
+This release consolidates all decoder changes since 0.1.4 and pairs with CinemaSeat **0.2.24 / build 36**. It supports speaker-preserving DTS 5.1(side) and 2.1 FLAC 7.1 carriers, plus explicitly negotiated, bounded initial DTS-HD XLL priming for Spectre. Complete frames retain 7.1/24-bit precision; the missing first frame is declared. No lossy core fallback, downmix, resampling or relaxed timeline tolerance. Arbitrary/repeated/later failures remain fatal; TrueHD/MLP behavior is unchanged.
+
+See `CHANGELOG.md` and `docs/PROTOCOL_V1.md` for the complete deltas and negotiation contract. Development labels 0.1.6/0.1.7 in existing deployment evidence are historical; the final source release number is 0.1.5. Regression tests and deployment are not repeated for this commit, at the user's request. The already running ODROID image retains its earlier observed label until a separate rebuild/deployment.
+
+## Historical development notes
 
 # 0.1.4 — 2026-11-02 (diagnostic service update)
 

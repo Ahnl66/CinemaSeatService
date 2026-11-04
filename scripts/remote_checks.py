@@ -75,7 +75,7 @@ def main():
     inputs.add_argument('--source', type=Path, help='Authorized local source; path is never sent or reported')
     parser.add_argument('--exporter', type=Path)
     parser.add_argument('--audio-ordinal', type=int, default=0)
-    parser.add_argument('--layout-policy', choices=['dts-side-5.1-to-7.1-silence-v1','dts-native-or-side-7.1-v1'], help='Explicit original-source side padding investigation')
+    parser.add_argument('--layout-policy', choices=['dts-side-5.1-to-7.1-silence-v1','dts-native-or-side-7.1-v1','dts-flac-carrier-v2'], help='Explicit original-source side padding investigation')
     parser.add_argument('--seconds', type=int, choices=range(1, 16), default=5)
     parser.add_argument('--sessions', type=int, choices=[1, 2, 4], default=1)
     parser.add_argument('--iterations', type=int, default=1)
@@ -108,7 +108,8 @@ def main():
                 if args.layout_policy not in caps.get('output_layout_policies',[]):raise RuntimeError('unsupported_layout_policy')
                 if fixture['start']['input']['codec']!='dts':raise RuntimeError('unsupported_layout_policy')
                 fixture['start']['output']['layout_policy']=args.layout_policy
-                report['desired_settings']={'layout_policy':args.layout_policy,'source_channel_order':['FL','FR','FC','LFE','SL','SR'],'output_channel_order':['FL','FR','FC','LFE','BL','BR','SL','SR'],'silent_channels':['BL','BR']}
+                carrier21=args.layout_policy=='dts-flac-carrier-v2' and fixture['start']['input']['channel_order_hint']==['FL','FR','LFE']
+                report['desired_settings']={'layout_policy':args.layout_policy,'source_channel_order':['FL','FR','LFE'] if carrier21 else ['FL','FR','FC','LFE','SL','SR'],'output_channel_order':['FL','FR','FC','LFE','BL','BR','SL','SR'] if carrier21 else ['FL','FR','FC','LFE','BL','BR','SL','SR'],'silent_channels':['FC','BL','BR','SL','SR'] if carrier21 else ['BL','BR']}
             source = fixture['start']['input']
             report['source_description'] = {key: source[key] for key in ['codec', 'sample_rate_hint', 'bits_per_sample_hint', 'channel_order_hint', 'time_base']}
             report['source_description']['expected_source_profile'] = fixture.get('expected_source_profile')
