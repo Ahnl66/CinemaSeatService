@@ -11,6 +11,12 @@ This release consolidates all decoder changes since 0.1.4 and pairs with CinemaS
 
 See `CHANGELOG.md` and `docs/PROTOCOL_V1.md` for the complete deltas and negotiation contract. Development labels 0.1.6/0.1.7 in existing deployment evidence are historical; the final source release number is 0.1.5. Regression tests and deployment are not repeated for this commit, at the user's request. The already running ODROID image retains its earlier observed label until a separate rebuild/deployment.
 
+## License
+
+The CinemaSeatService and macOS app source code is available under the
+[MIT License](LICENSE). Third-party components are covered by their
+[respective licenses](THIRD_PARTY_NOTICES.md).
+
 ## Historical development notes
 
 # 0.1.4 — 2026-11-02 (diagnostic service update)
