@@ -1,0 +1,138 @@
+--- a/src/server.cpp
++++ b/src/server.cpp
+@@ -48,7 +48,8 @@
+     uint64_t generation = 0, received = 0, received_bytes = 0, consumed_bytes = 0;
+     uint64_t input_limit;
+     Credit output_credit;
+-    bool slot = false, upgraded = false, started = false, activated = false, eof = false, closing = false, close_started = false;
++    std::optional<size_t> slot;
++    bool upgraded = false, started = false, activated = false, eof = false, closing = false, close_started = false;
+     bool pinging = false, awaiting_pong = false, flush_error = false;
+     ws::close_code close_code = ws::close_code::normal;
+     Clock::time_point opened = Clock::now(), ping_at = opened, pong_due{}, stage_started = opened, write_started = opened;
+@@ -79,7 +80,12 @@
+     net::io_context io{2};
+     tcp::acceptor acceptor{io};
+     net::thread_pool codecs;
+-    std::atomic<int> slots{0};
++    struct Slot {
++        bool reserved = false;
++        Json activity = nullptr;
++    };
++    std::mutex slot_mutex;
++    std::vector<Slot> slots;
+     std::vector<std::weak_ptr<Session>> sessions; // acceptor strand only, shutdown after acceptor cancel
+     net::strand<net::io_context::executor_type> accept_strand{net::make_strand(io)};
+     net::signal_set signals{io, SIGINT, SIGTERM};
+@@ -88,20 +94,44 @@
+     net::executor_work_guard<net::io_context::executor_type> work_guard{io.get_executor()};
+     net::steady_timer shutdown_timer{accept_strand};
+     void await_workers() {
+-        if (slots.load() == 0) { work_guard.reset(); signals.cancel(); return; }
++        if (available_slots() == slots.size()) { work_guard.reset(); signals.cancel(); return; }
+         shutdown_timer.expires_after(std::chrono::milliseconds(50));
+         shutdown_timer.async_wait([this](auto error) { if (!error) await_workers(); });
+     }
+-    explicit Server(const Config& c) : config(c), logger(c), codecs(c.get("sessions", "maximum")) {
++    explicit Server(const Config& c) : config(c), logger(c), codecs(c.get("sessions", "maximum")),
++        slots(c.get("sessions", "maximum")) {
+         auto endpoint = tcp::endpoint(net::ip::make_address(config.value["listen"]["address"].get<std::string>()), config.get("listen", "port"));
+         acceptor.open(endpoint.protocol()); acceptor.set_option(net::socket_base::reuse_address(true));
+         acceptor.bind(endpoint); acceptor.listen();
+     }
+-    bool reserve() {
+-        int count = slots.load();
+-        while (count < config.get("sessions", "maximum")) if (slots.compare_exchange_weak(count, count + 1)) return true;
+-        return false;
++    std::optional<size_t> reserve() {
++        std::lock_guard lock(slot_mutex);
++        for (size_t index = 0; index < slots.size(); ++index) {
++            if (!slots[index].reserved) {
++                slots[index].reserved = true;
++                return index;
++            }
++        }
++        return std::nullopt;
++    }
++    void release(size_t index) {
++        std::lock_guard lock(slot_mutex);
++        slots[index] = {};
++    }
++    void set_activity(size_t index, Json activity) {
++        std::lock_guard lock(slot_mutex);
++        slots[index].activity = std::move(activity);
++    }
++    size_t available_slots() {
++        std::lock_guard lock(slot_mutex);
++        return std::count_if(slots.begin(), slots.end(), [](const auto& slot) { return !slot.reserved; });
+     }
++    Json session_activity() {
++        std::lock_guard lock(slot_mutex);
++        Json activity = Json::array();
++        for (const auto& slot : slots) activity.push_back(slot.activity);
++        return activity;
++    }
+     void accept() {
+         acceptor.async_accept(net::make_strand(io), net::bind_executor(accept_strand, [this](beast::error_code error, tcp::socket socket) {
+             if (!error) {
+@@ -142,7 +172,7 @@
+       inputs(c.get("limits", "queued_input_bytes")), input_limit(c.get("limits", "input_window_bytes")) {
+     request.header_limit(16384); request.body_limit(0);
+ }
+-Session::~Session() { if (slot) --owner.slots; }
++Session::~Session() { if (slot) owner.release(*slot); }
+ void Session::begin() {
+     beast::get_lowest_layer(socket).expires_after(std::chrono::seconds(config.get("timeouts", "handshake_seconds")));
+     auto self = shared_from_this();
+@@ -162,17 +192,28 @@
+     if (req.method() != http::verb::get) return respond(http::status::method_not_allowed, {{"code", "protocol_error"}});
+     if (req.find(http::field::origin) != req.end()) return respond(http::status::bad_request, {{"code", "protocol_error"}});
+     if (req.target() == "/healthz") return respond(http::status::ok, {{"status", "ok"}, {"protocol", 1}});
+-    if (req.target() == "/v1/capabilities") return respond(http::status::ok, {
++    if (req.target() == "/v1/capabilities") {
++        Json capabilities{
+         {"protocol", 1}, {"service_version", CSAD_SERVICE_VERSION}, {"build_id", CSAD_BUILD_ID}, {"ffmpeg_revision", revision},
+         {"input_codecs", {"dts", "truehd", "mlp"}}, {"output_codecs", {"flac"}},
+         {"startup_policies", {"dts-initial-xll-preroll-v1"}},
+         {"output_layout_policies", {"dts-side-5.1-to-7.1-silence-v1", "dts-native-or-side-7.1-v1", "dts-flac-carrier-v2"}},
+-        {"limits", config.value["limits"]}, {"available_sessions", std::max(0, config.get("sessions", "maximum") - owner.slots.load())}});
++        {"limits", config.value["limits"]}, {"available_sessions", owner.available_slots()}};
++        auto& connection = beast::get_lowest_layer(socket).socket();
++        beast::error_code peer_error, local_error;
++        auto peer = connection.remote_endpoint(peer_error);
++        auto local = connection.local_endpoint(local_error);
++        // Show activity only to clients on this Mac, including a self-connection
++        // to a configured LAN address instead of a wildcard listener.
++        if (!peer_error && !local_error && peer.address() == local.address())
++            capabilities["session_activity"] = owner.session_activity();
++        return respond(http::status::ok, capabilities);
++    }
+     if (req.target() != "/v1/session") return respond(http::status::not_found, {{"code", "protocol_error"}});
+     if (!ws::is_upgrade(req) || req[http::field::sec_websocket_protocol] != "cs-audio.v1")
+         return respond(http::status::bad_request, {{"code", "unsupported_version"}});
+-    if (owner.shutting_down || !owner.reserve()) return respond(http::status::service_unavailable, {{"code", "capacity"}});
+-    slot = true;
++    if (!owner.shutting_down) slot = owner.reserve();
++    if (!slot) return respond(http::status::service_unavailable, {{"code", "capacity"}});
+     socket.set_option(ws::stream_base::decorator([](ws::response_type& res) { res.set(http::field::sec_websocket_protocol, "cs-audio.v1"); }));
+     socket.set_option(ws::stream_base::timeout{std::chrono::seconds(config.get("timeouts", "handshake_seconds")), ws::stream_base::none(), false});
+     socket.read_message_max(config.get("limits", "packet_payload_bytes") + 64);
+@@ -246,6 +287,10 @@
+         auto self = shared_from_this();
+         CodecPipeline pipeline(start, config.get("sessions", "codec_threads"), config.get("limits", "pcm_fifo_samples"),
+             [this](const Json& format) {
++                const auto& source_order = format.contains("source_channel_order")
++                    ? format.at("source_channel_order") : format.at("channel_order");
++                owner.set_activity(*slot, {{"source_profile", format.at("source_profile")},
++                    {"source_channels", source_order.size()}, {"output_codec", format.at("codec")}});
+                 formatted = true; owner.logger.event({{"event", "output_format"}, {"session_id", id},
+                     {"sample_rate", format.at("sample_rate")}, {"bits_per_sample", format.at("bits_per_sample")},
+                     {"channel_order", format.at("channel_order")}, {"source_profile", format.at("source_profile")}}); control(format);
+@@ -273,6 +318,7 @@
+     } catch (...) {
+         net::post(socket.get_executor(), [self = shared_from_this()] { self->fail("internal_error"); });
+     }
++    owner.set_activity(*slot, nullptr);
+     working = false;
+     owner.logger.event({{"event", "session_end"}, {"session_id", id}, {"input_high_water_bytes", std::to_string(input_peak.load())}, {"output_high_water_bytes", std::to_string(output_peak)}, {"wall_ms", std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - began).count()}});
+ }

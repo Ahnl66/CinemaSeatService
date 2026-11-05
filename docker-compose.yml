@@ -2,7 +2,7 @@
 # docker compose -f docker-compose.yml build
 services:
   audio-decoder:
-    image: cinemaseat-audio-decoder:0.1.5
+    image: cinemaseat-audio-decoder:0.1.6
     pull_policy: never
     build:
       context: .

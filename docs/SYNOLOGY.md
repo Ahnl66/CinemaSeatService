@@ -1,6 +1,6 @@
 # Install on a Synology NAS
 
-Use Container Manager to build and run CinemaSeat Audio Decoder 0.1.5 on the NAS.
+Use Container Manager to build and run CinemaSeat Audio Decoder 0.1.6 on the NAS.
 
 1. Save the raw [docker-compose.yml](../docker/synology/docker-compose.yml)
    and [Dockerfile](../docker/synology/Dockerfile) from GitHub. Upload both
@@ -15,7 +15,7 @@ Use Container Manager to build and run CinemaSeat Audio Decoder 0.1.5 on the NAS
    JSON containing `"protocol":1` and `"status":"ok"`. Its WebSocket endpoint
    is `ws://<NAS-IP>:9078`.
 
-The build downloads a pinned commit from the public
+The build downloads the tagged release source from the public
 [Ahnl66/CinemaSeatService](https://github.com/Ahnl66/CinemaSeatService)
 repository and compiles the service on the NAS. The NAS needs internet access
 during the build. The image includes the default settings and reads them at

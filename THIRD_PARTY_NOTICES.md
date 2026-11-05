@@ -1,8 +1,8 @@
-# Dependencies — development candidate 0.1.3
+# Third-party dependencies
 
 Exact source URLs, revisions and SHA-256 hashes are in `dependencies/manifest.json`.
 
-- FFmpeg: LGPL-2.1-or-later; dynamically linked libavcodec and libavutil only. GPL/nonfree, network, avformat and CLI programs disabled in the production build. The separate host-test build includes libavformat, local-file demuxers and required parsers solely for explicit authorized-source fixtures; no file reader or extra codec is added to the runtime image. The builder applies one documented fail-closed patch in `dca_xll.c`: return AVERROR_INVALIDDATA before lossy XLL recovery. This can reject otherwise decodable multichannel startup; it never substitutes core audio. Publish this exact builder/patch and source manifest with any binary distribution. Full upstream source and license are retained in the build scratch directory.
+- FFmpeg: LGPL-2.1-or-later; dynamically linked libavcodec and libavutil only. GPL/nonfree, network, avformat and CLI programs disabled in the production build. The separate host-test build includes libavformat, local-file demuxers and required parsers solely for explicit authorized-source fixtures; no file reader or extra codec is added to the runtime image. The builder applies one documented fail-closed patch in `dca_xll.c`: report a typed XLL refusal before lossy core recovery. Negotiated startup priming can account for one missing initial frame without substituting core audio. Publish this exact builder/patch and source manifest with any binary distribution. Full upstream source and license are retained in the build scratch directory.
 - Boost 1.90.0: Boost Software License 1.0, header-only Asio/Beast/UUID use.
 - JSON for Modern C++ 3.12.0, Copyright 2013–2025 Niels Lohmann: MIT.
 
@@ -14,4 +14,11 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-Project license has not been selected. The user authorized a private source snapshot; no public release or image has been published. Select a project license and complete distribution compliance before publication. Debian runtime image includes its own distribution package copyrights. Base image digest is pinned in docker/Dockerfile; apt build-tool packages are resolved by Debian during build, so this is source-pinned, not a bit-reproducible image claim.
+The macOS release includes the FFmpeg and Boost license texts. The accompanying
+FFmpeg source archive contains the exact patched source used for the bundled
+libraries. The dependency manifest and build script are in the service source
+at the release tag.
+
+The Debian runtime image includes its own distribution package copyrights.
+The base image digest is pinned in `docker/Dockerfile`. Debian resolves the
+build-tool packages during the build.

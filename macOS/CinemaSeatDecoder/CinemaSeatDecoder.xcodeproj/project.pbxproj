@@ -1,0 +1,150 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = { LastUpgradeCheck = 2600; };
+			buildConfigurationList = A00000000000000000000010;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			knownRegions = (en, Base);
+			mainGroup = A00000000000000000000002;
+			productRefGroup = A00000000000000000000004;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A00000000000000000000005);
+		};
+		A00000000000000000000002 = {
+			isa = PBXGroup;
+			children = (A00000000000000000000003, A00000000000000000000016, A00000000000000000000004);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (A00000000000000000000008, A00000000000000000000009, A0000000000000000000000A);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (A0000000000000000000000B);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000005 /* CinemaSeat Decoder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000011;
+			buildPhases = (A00000000000000000000006, A00000000000000000000007);
+			buildRules = ();
+			dependencies = ();
+			name = "CinemaSeat Decoder";
+			productName = "CinemaSeat Decoder";
+			productReference = A0000000000000000000000B;
+			productType = "com.apple.product-type.application";
+		};
+		A00000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (A0000000000000000000000C, A0000000000000000000000D);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000007 /* Embed native decoder */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = ();
+			name = "Embed native decoder";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "/bin/bash \"$SRCROOT/EmbedDecoder.sh\"";
+		};
+		A00000000000000000000008 /* AppDelegate.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = AppDelegate.swift;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000009 /* DecoderService.swift */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.swift;
+			path = DecoderService.swift;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000000A /* Info.plist */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.plist.xml;
+			path = Info.plist;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000000B /* CinemaSeat Decoder.app */ = {
+			isa = PBXFileReference;
+			explicitFileType = wrapper.application;
+			includeInIndex = 0;
+			path = "CinemaSeat Decoder.app";
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		A0000000000000000000000C /* AppDelegate.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = A00000000000000000000008;
+		};
+		A0000000000000000000000D /* DecoderService.swift in Sources */ = {
+			isa = PBXBuildFile;
+			fileRef = A00000000000000000000009;
+		};
+		A00000000000000000000010 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (A00000000000000000000012, A00000000000000000000013);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000011 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (A00000000000000000000014, A00000000000000000000015);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000012 /* Debug project settings */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A00000000000000000000013 /* Release project settings */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A00000000000000000000014 /* Debug target settings */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000016;
+			buildSettings = {};
+			name = Debug;
+		};
+		A00000000000000000000015 /* Release target settings */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000016;
+			buildSettings = {};
+			name = Release;
+		};
+		A00000000000000000000016 /* App.xcconfig */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = text.xcconfig;
+			path = App.xcconfig;
+			sourceTree = SOURCE_ROOT;
+		};
+	};
+	rootObject = A00000000000000000000001;
+}

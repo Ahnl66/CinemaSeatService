@@ -1,5 +1,5 @@
 FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3 AS build
-ARG SOURCE_REF=a178864adde436f965163e48f28dfb79beb921cb
+ARG SOURCE_REF=v0.1.6
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake python3 curl ca-certificates pkg-config bzip2 \
@@ -25,7 +25,7 @@ RUN python3 scripts/build_dependencies.py --scratch /work \
 
 FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 LABEL org.opencontainers.image.title="CinemaSeat Audio Decoder" \
-      org.opencontainers.image.version="0.1.5"
+      org.opencontainers.image.version="0.1.6"
 COPY --from=build /runtime /opt/csad
 COPY --from=build /source/config/settings.example.json /config/settings.json
 ENV LD_LIBRARY_PATH=/opt/csad/lib

@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(CinemaSeatDecoderMacHelper LANGUAGES CXX)
+if(NOT APPLE)
+  message(FATAL_ERROR "This wrapper builds the native macOS decoder")
+endif()
+set(CSAD_SOURCE "" CACHE PATH "Pinned CinemaSeatService checkout")
+add_subdirectory("${CSAD_SOURCE}" decoder)
+target_sources(cinemaseat-audio-decoder PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/parent_lifetime.cpp")

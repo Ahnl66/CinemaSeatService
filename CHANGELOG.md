@@ -1,3 +1,8 @@
+# CinemaSeat Audio Decoder 0.1.6 — 2026-11-05
+
+- Added CinemaSeat Decoder 0.1.1 for macOS. Opening the app starts the decoder and puts a waveform icon in the menu bar. Its English panel shows the address, uptime, service version and four live decoding sessions. **Stop and Quit** shuts down the service.
+- Added downloadable Docker build files and service source for Docker Compose and Dockge, including the two-file Synology Container Manager setup.
+
 # 0.1.5 — 2026-11-04
 
 All changes since 0.1.4 are consolidated into 0.1.5. Intermediate development labels 0.1.6 and 0.1.7 were provisional. The matching CinemaSeat app release is 0.2.24 / build 36.

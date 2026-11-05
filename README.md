@@ -1,3 +1,10 @@
+# CinemaSeat Audio Decoder 0.1.6 — 2026-11-05
+
+- Added CinemaSeat Decoder 0.1.1 for macOS. Opening the app starts the decoder and puts a waveform icon in the menu bar. Its English panel shows the address, uptime, service version and four live decoding sessions. **Stop and Quit** shuts down the service.
+- Added downloadable Docker build files and service source for Docker Compose and Dockge, including the two-file Synology Container Manager setup.
+
+[Install from the release](https://github.com/Ahnl66/CinemaSeatService/releases/tag/v0.1.6) or [build the macOS app](macOS/CinemaSeatDecoder/README.md).
+
 # CinemaSeat Audio Decoder 0.1.5 — 2026-11-04
 
 This release consolidates all decoder changes since 0.1.4 and pairs with CinemaSeat **0.2.24 / build 36**. It supports speaker-preserving DTS 5.1(side) and 2.1 FLAC 7.1 carriers, plus explicitly negotiated, bounded initial DTS-HD XLL priming for Spectre. Complete frames retain 7.1/24-bit precision; the missing first frame is declared. No lossy core fallback, downmix, resampling or relaxed timeline tolerance. Arbitrary/repeated/later failures remain fatal; TrueHD/MLP behavior is unchanged.

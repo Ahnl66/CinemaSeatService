@@ -5,6 +5,7 @@ from pathlib import Path
 from build_dependencies import build
 
 ROOT = Path(__file__).resolve().parents[1]
+image = "cinemaseat-audio-decoder:" + (ROOT / "VERSION").read_text().strip()
 parser = argparse.ArgumentParser()
 parser.add_argument('--all', action='store_true')
 parser.add_argument('--host', action='store_true', help='Run independent native checks; not full release acceptance')
@@ -53,8 +54,8 @@ try:
             incomplete('containers-amd64-arm64', 'Docker absent on this host; user prohibits installing it here. Run native on external servers.')
         else:
             run('docker-version', ['docker', 'version'])
-            run('docker-native-build', ['docker', 'build', '-f', ROOT / 'docker/Dockerfile', '-t', 'cinemaseat-audio-decoder:0.1.5', ROOT], timeout=1800)
-            run('docker-native-registry', ['docker', 'run', '--rm', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', 'cinemaseat-audio-decoder:0.1.5', '--codec-registry'])
+            run('docker-native-build', ['docker', 'build', '-f', ROOT / 'docker/Dockerfile', '-t', image, ROOT], timeout=1800)
+            run('docker-native-registry', ['docker', 'run', '--rm', '--read-only', '--cap-drop=ALL', '--security-opt=no-new-privileges', image, '--codec-registry'])
             run('docker-native-runtime', [sys.executable, ROOT / 'scripts/container_checks.py', scratch])
             incomplete('container-audio', 'Native container audio roundtrip and both target hardware endurance runs remain required.')
             incomplete('other-native-architecture', 'One native build cannot prove both amd64 and arm64; collect separate native server evidence.')
