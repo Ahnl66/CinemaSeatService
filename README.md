@@ -58,6 +58,7 @@ CinemaSeat production integration and the Diagnose route are not implemented.
 The native arm64 candidate and short codec tests pass. Native amd64, a complete
 original-timestamp DTS-HD MA service pass and physical acceptance remain open.
 
+- [Install with Synology Container Manager](docs/SYNOLOGY.md)
 - [Install with Dockge on the ODROID](docs/DEPLOYMENT.md#dockge-on-the-odroid-n2)
 - [Root Compose file](docker-compose.yml)
 - [Implementation status and evidence matrix](docs/IMPLEMENTATION_STATUS.md)
@@ -72,7 +73,7 @@ original-timestamp DTS-HD MA service pass and physical acceptance remain open.
 
 ## Dockge quick start
 
-Run these commands on the ODROID, using its existing GitHub access. Replace
+Run these commands on the ODROID. Replace
 `/opt/stacks` if Dockge uses a different stacks directory. Use your normal account
 with access to that directory and the Docker daemon.
 
@@ -116,7 +117,7 @@ CinemaSeat app or its Vendor directory. App and service have independent Git
 history and version numbers. Service SemVer, protocol major and app version are
 separate; the app version is not changed by a service-only commit.
 
-This repository is private. Public releases, project licensing, published images
-and device installation require separate instructions. No GitHub Actions workflow
+This repository is public. Project licensing, published images and device
+installation require separate instructions. No GitHub Actions workflow
 is included or dispatched. Keep runtime settings, logs, build outputs and private
 media outside Git. All repository documentation is maintained in English.

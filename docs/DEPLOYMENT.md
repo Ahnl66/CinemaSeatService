@@ -4,6 +4,8 @@ The service runs independently. CinemaSeat production integration and the Diagno
 connection are not implemented or accepted. The host test client can use the
 service. Installing the stack does not yet enable external audio in CinemaSeat.
 
+For a Synology NAS, follow the [Container Manager guide](SYNOLOGY.md).
+
 ## Dockge on the ODROID-N2+
 
 The intended test host is `odroidn2.local`, running Armbian and an existing Dockge
@@ -31,8 +33,7 @@ access to the stacks directory and permission to run Docker.
 
 ### 2. Clone and prepare the stack
 
-The repository is private. Use the server's existing GitHub authentication; do
-not put a token in the Compose file, settings file or repository URL.
+The public repository can be cloned over HTTPS without GitHub credentials.
 
 ```sh
 cd /opt/stacks
@@ -65,7 +66,7 @@ as sustained playback or physical acceptance.
 
 The root Compose file has `pull_policy: never`: Dockge uses the locally built
 `cinemaseat-audio-decoder:0.1.4` image. It does not try to pull an unpublished
-image, and it does not need access to the private Git repository itself.
+image, and Dockge does not need to fetch the repository itself.
 
 ### 4. Deploy in Dockge
 
